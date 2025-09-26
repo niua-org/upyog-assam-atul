@@ -3,15 +3,6 @@ import { FormStep, CardLabel, Dropdown, TextInput } from "@upyog/digit-ui-react-
 
 const AreaMapping = ({ t, config, onSelect, formData, searchResult }) => {
 
-  // State for all dropdown values
-  const [district, setDistrict] = useState( searchResult?.areaMapping?.district || formData?.areaMapping?.district ||  "");
-  const [planningArea, setPlanningArea] = useState(formData?.areaMapping?.planningArea || searchResult?.areaMapping?.planningArea || "");
-  const [ppAuthority, setPpAuthority] = useState(formData?.areaMapping?.ppAuthority || searchResult?.areaMapping?.planningPermitAuthority || "");
-  const [bpAuthority, setBpAuthority] = useState(formData?.areaMapping?.bpAuthority || searchResult?.areaMapping?.buildingPermitAuthority || "");
-  const [revenueVillage, setRevenueVillage] = useState(formData?.areaMapping?.revenueVillage || searchResult?.areaMapping?.revenueVillage || "");
-  const [mouza, setMouza] = useState(formData?.areaMapping?.mouza || searchResult?.areaMapping?.mouza || "");
-  const [ward, setWard] = useState(formData?.areaMapping?.ward || searchResult?.areaMapping?.ward || "");
-  
   // State for dropdown options
   const [districts, setDistricts] = useState([]);
   const [planningAreas, setPlanningAreas] = useState([]);
@@ -19,6 +10,14 @@ const AreaMapping = ({ t, config, onSelect, formData, searchResult }) => {
   const [bpAuthorities, setBpAuthorities] = useState([]);
   const [revenueVillages, setRevenueVillages] = useState([]);
   const [mouzas, setMouzas] = useState([]);
+  // State for all dropdown values
+  const [district, setDistrict] = useState(formData?.areaMapping?.district ||  "");
+  const [planningArea, setPlanningArea] = useState(null);
+  const [ppAuthority, setPpAuthority] = useState(null);
+  const [bpAuthority, setBpAuthority] = useState(null);
+  const [revenueVillage, setRevenueVillage] = useState(null);
+  const [mouza, setMouza] = useState(mouzas.find(opt=>opt.code ===searchResult?.areaMapping?.mouza)|| formData?.areaMapping?.mouza || "");
+  const [ward, setWard] = useState(searchResult?.areaMapping?.ward || formData?.areaMapping?.ward || "");  
 
   // Fetch data from MDMS
   const { data: areaMappingData, isLoading } = Digit.Hooks.useEnabledMDMS(
@@ -49,8 +48,12 @@ const AreaMapping = ({ t, config, onSelect, formData, searchResult }) => {
         i18nKey: district.districtCode,
       }));
       setDistricts(formattedDistricts);
+      if (searchResult?.areaMapping?.district) {
+        const selected = formattedDistricts.find(d => d.i18nKey === searchResult.areaMapping.district);
+        if (selected) setDistrict(selected);
+      }
     }
-  }, [areaMappingData]);
+  }, [areaMappingData, searchResult]);
 
   // Update planning areas when district changes
   useEffect(() => {
@@ -64,16 +67,13 @@ const AreaMapping = ({ t, config, onSelect, formData, searchResult }) => {
         i18nKey: area.planningAreaCode,
       }));
       setPlanningAreas(filteredPlanningAreas);
-      
-      // Reset dependent fields
-      setPlanningArea("");
-      setPpAuthority("");
-      setBpAuthority("");
-      setRevenueVillage("");
-      setMouza("");
-      setWard("");
+
+      if (searchResult?.areaMapping?.planningArea) {
+        const selected = filteredPlanningAreas.find(p => p.i18nKey === searchResult.areaMapping.planningArea);
+        if (selected) setPlanningArea(selected);
+      } else setPlanningArea(null);
     }
-  }, [district, areaMappingData]);
+  }, [district, areaMappingData, searchResult]);
 
   // Update PP authorities when planning area changes
   useEffect(() => {
@@ -88,15 +88,13 @@ const AreaMapping = ({ t, config, onSelect, formData, searchResult }) => {
         }));
 
       setPpAuthorities(filteredPpAuthorities);
-      
-      // Reset dependent fields
-      setPpAuthority("");
-      setBpAuthority("");
-      setRevenueVillage("");
-      setMouza("");
-      setWard("");
+
+      if (searchResult?.areaMapping?.planningPermitAuthority) {
+        const selected = filteredPpAuthorities.find(p => p.i18nKey === searchResult.areaMapping.planningPermitAuthority);
+        if (selected) setPpAuthority(selected);
+      } else setPpAuthority(null);
     }
-  }, [planningArea, areaMappingData]);
+  }, [planningArea, areaMappingData, searchResult]);
 
   // Update BP authorities when PP authority changes
   useEffect(() => {
@@ -110,19 +108,17 @@ const AreaMapping = ({ t, config, onSelect, formData, searchResult }) => {
         i18nKey: authority.bpAuthorityCode,
       }));
       setBpAuthorities(filteredBpAuthorities);
-      
-      // Reset dependent fields
-      setBpAuthority("");
-      setRevenueVillage("");
-      setMouza("");
-      setWard("");
+
+      if (searchResult?.areaMapping?.buildingPermitAuthority) {
+        const selected = filteredBpAuthorities.find(b => b.i18nKey === searchResult.areaMapping.buildingPermitAuthority);
+        if (selected) setBpAuthority(selected);
+      } else setBpAuthority(null);
     }
-  }, [ppAuthority, areaMappingData]);
+  }, [ppAuthority, areaMappingData, searchResult]);
 
   // Update revenue villages when BP authority changes
   useEffect(() => {
     if (bpAuthority && areaMappingData?.revenueVillages) {
-      // Filter revenue villages based on selected BP authority
       const filteredRevenueVillages = areaMappingData.revenueVillages
       .filter(village => village.bpAuthorityCode === bpAuthority?.code)
       .map(village => ({
@@ -131,13 +127,13 @@ const AreaMapping = ({ t, config, onSelect, formData, searchResult }) => {
         i18nKey: village.revenueVillageCode,
       }));
       setRevenueVillages(filteredRevenueVillages);
-      
-      // Reset dependent fields
-      setRevenueVillage("");
-      setMouza("");
-      setWard("");
+
+      if (searchResult?.areaMapping?.revenueVillage) {
+        const selected = filteredRevenueVillages.find(r => r.i18nKey === searchResult.areaMapping.revenueVillage);
+        if (selected) setRevenueVillage(selected);
+      } else setRevenueVillage(null);
     }
-  }, [bpAuthority, areaMappingData]);
+  }, [bpAuthority, areaMappingData, searchResult]);
 
   // Update mouzas when revenue village changes
   useEffect(() => {
@@ -151,12 +147,12 @@ const AreaMapping = ({ t, config, onSelect, formData, searchResult }) => {
         i18nKey: mouza.mouzaCode,
       }));
       setMouzas(filteredMouzas);
-      
-      // Reset dependent field
-      setMouza("");
-      setWard("");
+      if (searchResult?.areaMapping?.mouza) {
+        const selected = filteredMouzas.find(m => m.i18nKey === searchResult.areaMapping.mouza);
+        if (selected) setMouza(selected);
+      } else setMouza(null);
     }
-  }, [revenueVillage, areaMappingData]);
+  }, [revenueVillage, areaMappingData, searchResult]);
 
   // Go next
   const goNext = () => {
@@ -201,8 +197,8 @@ const AreaMapping = ({ t, config, onSelect, formData, searchResult }) => {
             optionKey="i18nKey"
             id="district"
             selected={district}
-            select={(value) => setDistrict(value)}
-            placeholder={isLoading ? `${t("LOADING_DISTRICTS")}` : `${t("SELECT_DISTRICT")}`}
+            select={setDistrict}
+            placeholder={isLoading ? t("LOADING_DISTRICTS") : t("SELECT_DISTRICT")}
           />
 
           {/* Planning Area */}
@@ -210,11 +206,10 @@ const AreaMapping = ({ t, config, onSelect, formData, searchResult }) => {
           <Dropdown
             t={t}
             option={planningAreas}
-            optionKey="i18nKey"
-            id="planningArea"
+            optionKey="i18nKey" 
             selected={planningArea}
-            select={(value) => setPlanningArea(value)}
-            placeholder={!district ? `${t("SELECT_DISTRICT_FIRST")}` : `${t("SELECT_PLANNING_AREA")}`}
+            select={setPlanningArea} 
+            placeholder={!district ? t("SELECT_DISTRICT_FIRST") : t("SELECT_PLANNING_AREA")} 
           />
 
           {/* PP Authority */}
@@ -223,10 +218,9 @@ const AreaMapping = ({ t, config, onSelect, formData, searchResult }) => {
             t={t}
             option={ppAuthorities}
             optionKey="i18nKey"
-            id="ppAuthority"
             selected={ppAuthority}
-            select={(value) => setPpAuthority(value)}
-            placeholder={!planningArea ? `${t("SELECT_PLANNING_AREA_FIRST")}` : `${t("SELECT_PP_AUTHORITY")}`}
+            select={setPpAuthority} 
+            placeholder={!planningArea ? t("SELECT_PLANNING_AREA_FIRST") : t("SELECT_PP_AUTHORITY")}
           />
 
           {/* BP Authority */}
@@ -235,10 +229,9 @@ const AreaMapping = ({ t, config, onSelect, formData, searchResult }) => {
             t={t}
             option={bpAuthorities}
             optionKey="i18nKey"
-            id="bpAuthority"
             selected={bpAuthority}
-            select={(value) => setBpAuthority(value)}
-            placeholder={!ppAuthority ? `${t("SELECT_PP_AUTHORITY_FIRST")}` : `${t("SELECT_BP_AUTHORITY")}`}
+            select={setBpAuthority}
+            placeholder={!ppAuthority ? t("SELECT_PP_AUTHORITY_FIRST") : t("SELECT_BP_AUTHORITY")}
           />
 
           {/* Revenue Village */}
@@ -249,8 +242,8 @@ const AreaMapping = ({ t, config, onSelect, formData, searchResult }) => {
             optionKey="i18nKey"
             id="revenueVillage"
             selected={revenueVillage}
-            select={(value) => setRevenueVillage(value)}
-            placeholder={!bpAuthority ? `${t("SELECT_BP_AUTHORITY_FIRST")}` : `${t("SELECT_REVENUE_VILLAGE")}`}
+            select={setRevenueVillage}
+            placeholder={!bpAuthority ? t("SELECT_BP_AUTHORITY_FIRST") : t("SELECT_REVENUE_VILLAGE")}
           />
 
           {/* Mouza - Either dropdown or text input based on available data */}
@@ -260,10 +253,10 @@ const AreaMapping = ({ t, config, onSelect, formData, searchResult }) => {
               t={t}
               option={mouzas}
               optionKey="i18nKey"
-              id="mouza"
               selected={mouza}
-              select={(value) => setMouza(value)}
-              placeholder={!revenueVillage ? `${t("SELECT_REVENUE_VILLAGE_FIRST")}` : `${t("SELECT_MOUZA")}`}
+              
+              select={setMouza}
+              placeholder={!revenueVillage ? t("SELECT_REVENUE_VILLAGE_FIRST") : t("SELECT_MOUZA")} 
             />
           ) : (
             <TextInput

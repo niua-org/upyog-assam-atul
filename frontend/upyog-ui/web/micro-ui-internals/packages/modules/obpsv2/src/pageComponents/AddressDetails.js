@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { FormStep, TextInput, CardLabel, CheckBox, Dropdown, CardHeader, Loader } from "@upyog/digit-ui-react-components";
 import Timeline from "../components/Timeline";
 
-const AddressDetails = ({ t, config, onSelect, formData }) => {
+const AddressDetails = ({ t, config, onSelect, formData, searchResult}) => {
   // Fetch data from MDMS
   const { data: mdmsData, isLoading } = Digit.Hooks.useEnabledMDMS(
     "as", 
@@ -46,13 +46,25 @@ const AddressDetails = ({ t, config, onSelect, formData }) => {
   }, [mdmsData]);
 
   // Permanent Address Fields
-  const [permanentHouseNo, setPermanentHouseNo] = useState(formData?.address?.permanent?.houseNo || "");
-  const [permanentAddressLine1, setPermanentAddressLine1] = useState(formData?.address?.permanent?.addressLine1 || "");
-  const [permanentAddressLine2, setPermanentAddressLine2] = useState(formData?.address?.permanent?.addressLine2 || "");
-  const [permanentDistrict, setPermanentDistrict] = useState(formData?.address?.permanent?.district || "");
-  const [permanentCity, setPermanentCity] = useState(formData?.address?.permanent?.city || "");
-  const [permanentState, setPermanentState] = useState(formData?.address?.permanent?.state || "");
-  const [permanentPincode, setPermanentPincode] = useState(formData?.address?.permanent?.pincode || "");
+  const [permanentHouseNo, setPermanentHouseNo] = useState(formData?.address?.permanent?.houseNo || searchResult?.landInfo?.address?.houseNo ||"");
+  const searchResultDistrict = searchResult?.landInfo?.address?.district? {
+    "code" : searchResult?.landInfo?.address?.district,
+    "i18nKey" : searchResult?.landInfo?.address?.district
+  } : "";
+  const [permanentAddressLine1, setPermanentAddressLine1] = useState(formData?.address?.permanent?.addressLine1 || searchResult?.landInfo?.address?.addressLine1||"");
+  const [permanentAddressLine2, setPermanentAddressLine2] = useState(formData?.address?.permanent?.addressLine2 || searchResult?.landInfo?.address?.addressLine2 || "");
+  const [permanentDistrict, setPermanentDistrict] = useState(formData?.address?.permanent?.district || searchResultDistrict|| "");
+  const searchResultCity = searchResult?.landInfo?.address?.district? {
+    "code" : searchResult?.landInfo?.address?.district,
+    "i18nKey" : searchResult?.landInfo?.address?.district
+  } : "";
+  const [permanentCity, setPermanentCity] = useState(formData?.address?.permanent?.city || searchResultCity || "");
+    const searchResultState = searchResult?.landInfo?.address?.state ? {
+    "code" : searchResult?.landInfo?.address?.state,
+    "i18nKey" : searchResult?.landInfo?.address?.state
+  } : "";
+  const [permanentState, setPermanentState] = useState(formData?.address?.permanent?.state || searchResultState || "");
+  const [permanentPincode, setPermanentPincode] = useState(formData?.address?.permanent?.pincode || searchResult?.landInfo?.address?.pincode || "");
 
   // Correspondence Address Fields
   const [sameAsPermanent, setSameAsPermanent] = useState(formData?.address?.sameAsPermanent || false);

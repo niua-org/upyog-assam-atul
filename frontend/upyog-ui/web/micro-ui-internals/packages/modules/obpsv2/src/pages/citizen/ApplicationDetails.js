@@ -20,10 +20,11 @@ import {
     CardLabelDesc,
     UploadFile
   } from "@upyog/digit-ui-react-components";
-  import React, { useState } from "react";
+  import React, { useEffect, useState } from "react";
   import { useTranslation } from "react-i18next";
   import { useParams } from "react-router-dom";
   import get from "lodash/get";
+  import { isError, useQueryClient } from "react-query";
   // import WFApplicationTimeline from "../../pageComponents/WFApplicationTimeline";
   // import getBPAAcknowledgementData from "../../utils/getBPAAcknowledgementData";
   
@@ -42,7 +43,7 @@ import {
    * 
    * @returns {JSX.Element} Displays detailed BPA application information with applicant details, address, and land details.
    */
-  const BPAApplicationDetails = () => {
+  const BPAApplicationDetails =  () => {
     const { t } = useTranslation();
     const { acknowledgementIds, tenantId } = useParams();
     const [showOptions, setShowOptions] = useState(false);
@@ -54,19 +55,32 @@ import {
       tenantId,
       filters: { applicationNo: acknowledgementIds },
     });
+    const [workflowDetails, setWorkflowDetails] = useState(null);
+
+    useEffect(() => {
+      const fetchWorkflow = async () => {
+        const details = await Digit.WorkflowService.getByBusinessId(tenantId, acknowledgementIds);
+        setWorkflowDetails(details);
+      };
+
+      fetchWorkflow();
+    }, [acknowledgementIds, tenantId]);
+
+   const client = useQueryClient();
     const [actioneError, setActionError] = useState(null);
     const [popup, setPopup] = useState(false);
     const [selectedAction, setSelectedAction] = useState(null);
+    const [assignResponse, setAssignResponse] = useState(null);
+    const [toast, setToast] = useState(false);
     const [oldRTPName, setOldRTPName] = useState();
     const [ newRTPName, setNewRTPName ] = useState();
     const bpaApplicationDetail = get(data, "BPA", []);
     const [comments, setComments] = useState("");
     const [uploadedFile, setUploadedFile] = useState(null);
     const bpaId = get(data, "BPA[0].applicationNo", []);
-  
+    const [loader, setLoader] = useState(false);
     let bpa_details = (bpaApplicationDetail && bpaApplicationDetail.length > 0 && bpaApplicationDetail[0]) || {};
     const application = bpa_details;
-  
     sessionStorage.setItem("bpa", JSON.stringify(application));
   
     const mutation = Digit.Hooks.obpsv2.useBPACreateUpdateApi(tenantId, "update");
@@ -74,13 +88,59 @@ import {
     const { data: reciept_data, isLoading: recieptDataLoading } = Digit.Hooks.useRecieptSearch(
       {
         tenantId: tenantId,
-        businessService: "bpa-services",
+        businessService: "BPA_GMDA_GMC",
         consumerCodes: acknowledgementIds,
         isEmployee: false,
       },
       { enabled: acknowledgementIds ? true : false }
     );
-  
+    async function onAssign(selectedAction, comments, type) {
+  setPopup(false);
+
+  try {
+    const applicationDetails = data?.bpa?.[0]
+    const response = await mutation.mutateAsync({
+      BPA: 
+      {
+        ...applicationDetails,
+        workflow: {
+          ...applicationDetails.workflow, 
+          action: selectedAction,
+          comments: comments,
+            assignes: null,
+            varificationDocuments: null
+        },
+      },
+    
+
+    });
+
+    setAssignResponse(response);
+    setToast(true);
+    setLoader(true);
+    setTimeout(() => setToast(false), 10000);
+  } catch (err) {
+    console.error("Error while assigning:", err);
+    setToast(true);
+  }
+}
+
+     
+  //  const refreshData = async () => {
+  //      await client.refetchQueries(["fetchInboxData"]);
+  //      await workflowDetails.revalidate();
+  //      //await revalidateComplaintDetails();
+  //    };
+   
+  //    useEffect(() => {
+  //      (async () => {
+  //        if (bpaApplicationDetail) {
+  //          setLoader(true);
+  //          await refreshData();
+  //          setLoader(false);
+  //        }
+  //      })();
+  //    }, []);
     /**
      * This function handles the receipt generation and updates the BPA application details
      * with the generated receipt's file store ID.
@@ -113,6 +173,9 @@ import {
    const Heading = (props) => {
      return <h1 className="heading-m">{props.label}</h1>;
    };
+   function closeToast() {
+    setToast(false);
+  }
    
    const CloseBtn = (props) => {
      return (
@@ -138,11 +201,28 @@ import {
   function selectfile(e) {
     setFile(e.target.files[0]);
   }
+  function redirectToPage(redirectingUrl){
+      window.location.href=redirectingUrl;
+    }
   
     function onActionSelect(action) {
     setSelectedAction(action);
     switch (action) {
       case "NEWRTP":
+        setPopup(true);
+        setDisplayMenu(false);
+        break;
+      case "REJECT":
+        setPopup(true);
+        setDisplayMenu(false);
+        break;
+      case "EDIT":
+        let url=window.location.href;
+        let redirectingUrl= url.split("/application/")[0] + "/editApplication/" + url.split("/application/")[1].split("/")[0];
+
+        redirectToPage(redirectingUrl);    
+        break;
+      case "APPROVE":
         setPopup(true);
         setDisplayMenu(false);
         break;
@@ -167,14 +247,14 @@ import {
         <div>
           <div className="cardHeaderWithOptions" style={{ marginRight: "auto", maxWidth: "960px" }}>
             <Header styles={{ fontSize: "32px" }}>{t("BPA_APPLICATION_DETAILS")}</Header>
-            {dowloadOptions && dowloadOptions.length > 0 && (
+            {/* {dowloadOptions && dowloadOptions.length > 0 && (
               <MultiLink
                 className="multilinkWrapper"
                 onHeadClick={() => setShowOptions(!showOptions)}
                 displayOptions={showOptions}
                 options={dowloadOptions}
               />
-            )}
+            )} */}
           </div>
           <Card>
             <StatusTable>
@@ -399,7 +479,7 @@ import {
       headerBarMain={
         <Heading
           label={
-             t("NEW_RTP")
+             t(`${selectedAction}`)
           }
         />
       }
@@ -410,50 +490,86 @@ import {
          t("CS_COMMON_CONFIRM")
       }
       actionSaveOnSubmit={() => {
-        if(!comments)
-        setActionError(t("CS_MANDATORY_REASON"));
+        if(selectedAction==="APPROVE")
+        //setActionError(t("CS_MANDATORY_REASON"));
+           onAssign(selectedAction, comments, "Edit");
       if(!oldRTPName)
         setActionError(t("CS_OLD_RTP_NAME_MANDATORY"))
       if(!newRTPName)
         setActionError(t("CS_NEW_RTP_NAME_MANDATORY"))
-        // if(selectedAction === "REJECT" && !comments)
-        // setError(t("CS_MANDATORY_COMMENTS"));
-        // else
-        // onAssign(selectedEmployee, comments, uploadedFile);
+        if(selectedAction === "REJECT" && !comments)
+        setActionError(t("CS_MANDATORY_COMMENTS"));
+        
+       
       }}
       error={actioneError}
       setError={setActionError}
     >
       <Card>
-        
-          <React.Fragment>
-            <CardLabel>{t("OLD_RTP_NAME")}</CardLabel>
-            { <TextInput  t={t} type="text" value={oldRTPName} onChange={(e) => setOldRTPName(e.target.value.replace(/[^a-zA-Z\s]/g, ""))} ValidationRequired={true}{...{ pattern: "^[a-zA-Z ]+$", title: t("BPA_NAME_ERROR_MESSAGE") }} />}
-              <CardLabel>{t("NEW_RTP_NAME")}</CardLabel>
-            { <TextInput  t={t} type="text" value={newRTPName} onChange={(e) => setNewRTPName(e.target.value.replace(/[^a-zA-Z\s]/g, ""))} ValidationRequired={true}{...{ pattern: "^[a-zA-Z ]+$", title: t("BPA_NAME_ERROR_MESSAGE") }} />}
-          </React.Fragment>
-        <CardLabel>{t("REASON_FOR_CHANGING_PREVIOUS_RTP")}</CardLabel>
-        <TextArea name="reason" onChange={addComment} value={comments} maxLength={500}/>
+  <React.Fragment>
+    {selectedAction === "APPROVE" && (
+      <div>
+        <CardLabel>{t("COMMENTS")}</CardLabel>
+        <TextArea 
+          name="reason" 
+          onChange={addComment} 
+          value={comments} 
+          maxLength={500} 
+        />
+        <div style={{ textAlign: "right", fontSize: "12px", color: "#666" }}>
+          {comments.length}/500
+        </div>
+        <CardLabel>{t("CS_ACTION_SUPPORTING_DOCUMENTS76")}</CardLabel>
+        <CardLabelDesc>{t("CS_UPLOAD_RESTRICTIONS")}</CardLabelDesc>
+        <UploadFile
+          id="pgr-doc"
+          accept=".jpg"
+          onUpload={selectfile}
+          onDelete={() => setUploadedFile(null)}
+          message={
+            uploadedFile
+              ? `1 ${t("CS_ACTION_FILEUPLOADED")}`
+              : t("CS_ACTION_NO_FILEUPLOADED")
+          }
+        />
+      </div>
+    )}
+
+    {selectedAction === "NEW_RTP" && (
+      <div>
+        <CardLabel></CardLabel>
+        <TextArea 
+          name="reason" 
+          onChange={addComment} 
+          value={comments} 
+          maxLength={500} 
+        />
         <div style={{ textAlign: "right", fontSize: "12px", color: "#666" }}>
           {comments.length}/500
         </div>
         <CardLabel>{t("CS_ACTION_SUPPORTING_DOCUMENTS")}</CardLabel>
-        <CardLabelDesc>{t(`CS_UPLOAD_RESTRICTIONS`)}</CardLabelDesc>
+        <CardLabelDesc>{t("CS_UPLOAD_RESTRICTIONS")}</CardLabelDesc>
         <UploadFile
-          id={"pgr-doc"}
+          id="pgr-doc"
           accept=".jpg"
           onUpload={selectfile}
-          onDelete={() => {
-            setUploadedFile(null);
-          }}
-          message={uploadedFile ? `1 ${t(`CS_ACTION_FILEUPLOADED`)}` : t(`CS_ACTION_NO_FILEUPLOADED`)}
+          onDelete={() => setUploadedFile(null)}
+          message={
+            uploadedFile
+              ? `1 ${t("CS_ACTION_FILEUPLOADED")}`
+              : t("CS_ACTION_NO_FILEUPLOADED")
+          }
         />
-      </Card>
+      </div>
+    )}
+  </React.Fragment>
+</Card>
+
     </Modal>
             ):null}
   
             {/* <WFApplicationTimeline application={application} id={application?.applicationNo} userType={"citizen"} /> */}
-            {showToast && (
+            {/* {showToast && (
               <Toast
                 error={showToast.key}
                 label={t(showToast.label)}
@@ -462,9 +578,13 @@ import {
                   setShowToast(null);
                 }}
               />
-            )}
+            )} */}
+            {toast && <Toast label={t(assignResponse ? `CS_ACTION_${selectedAction}_TEXT` : "CS_ACTION_ASSIGN_FAILED")} onClose={closeToast} />}
              <ActionBar>
-              <SubmitBar label={t("WF_NEW_RTP")} onSubmit={() => onActionSelect("NEWRTP")} />
+              {displayMenu && workflowDetails?.ProcessInstances?.[0]?.nextActions ? (
+                  <Menu options={workflowDetails?.ProcessInstances?.[0]?.nextActions.map((action) => action.action)} t={t} onSelect={onActionSelect} />
+              ) : null}
+              <SubmitBar label={t("WF_TAKE_ACTION")} onSubmit={() => setDisplayMenu(!displayMenu)} />
             </ActionBar>
           </Card>
         </div>

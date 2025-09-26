@@ -18,7 +18,7 @@ const useBPAV2Inbox = ({ tenantId, filters, config={} }) => {
         moduleSearchCriteria: {
           ...(mobileNumber ? {mobileNumber}: {}),
           ...(!applicationNumber ? applicationNo ? {applicationNo} : {} : (applicationNumber ? {applicationNumber} : {})),
-          ...(applicationNumber ? {applicationNumber} : {}),
+          //...(applicationNumber ? {} : {}),
           ...(sortOrder ? {sortOrder} : {}),
           ...(sortBy ? {sortBy} : {}),
           // ...(applicationType?.length > 0 ? {applicationType: applicationType.map((item) => item.code).join(",")} : {}),
