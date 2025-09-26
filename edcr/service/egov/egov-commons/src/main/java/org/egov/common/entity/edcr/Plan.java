@@ -246,6 +246,10 @@ public class Plan implements Serializable {
 	private BigDecimal otherNotifiedWaterBodies = BigDecimal.ZERO;
     private BigDecimal otherLargePondsOrWaterBody = BigDecimal.ZERO;
     private BigDecimal smallPonds = BigDecimal.ZERO;
+    private BigDecimal totalKitchens = BigDecimal.ZERO;
+    private BigDecimal totalBathrooms = BigDecimal.ZERO;
+    private BigDecimal totalLatrines = BigDecimal.ZERO;
+    private BigDecimal totalUrinals = BigDecimal.ZERO;
     
     public BigDecimal getRiver() {
 		return river;
@@ -782,5 +786,37 @@ public class Plan implements Serializable {
 
     public void setCareTakerRoom(CareTakerRoom careTakerRoom) {
         this.careTakerRoom = careTakerRoom;
+    }
+
+    public BigDecimal getTotalKitchens() {
+        return totalKitchens;
+    }
+
+    public void setTotalKitchens(BigDecimal totalKitchens) {
+        this.totalKitchens = totalKitchens;
+    }
+
+    public BigDecimal getTotalBathrooms() {
+        return totalBathrooms;
+    }
+
+    public void setTotalBathrooms(BigDecimal totalBathrooms) {
+        this.totalBathrooms = totalBathrooms;
+    }
+
+    public BigDecimal getTotalLatrines() {
+        return totalLatrines;
+    }
+
+    public void setTotalLatrines(BigDecimal totalLatrines) {
+        this.totalLatrines = totalLatrines;
+    }
+
+    public BigDecimal getTotalUrinals() {
+        return totalUrinals;
+    }
+
+    public void setTotalUrinals(BigDecimal totalUrinals) {
+        this.totalUrinals = totalUrinals;
     }
 }

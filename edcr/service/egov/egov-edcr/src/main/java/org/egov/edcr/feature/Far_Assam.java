@@ -212,6 +212,12 @@ public class Far_Assam extends Far {
         processOccupancyInformation(pl);
         LOG.info("Occupancy information processed.");
 
+        // All Deductions in TotalBuiltUp Area
+        totalBuiltUpArea = farDeductions(pl, totalBuiltUpArea);
+
+        // Update virtual building with deducted built-up area
+        pl.getVirtualBuilding().setTotalBuitUpArea(totalBuiltUpArea);
+
         BigDecimal surrenderRoadArea = calculateSurrenderRoadArea(pl);
         pl.setTotalSurrenderRoadArea(surrenderRoadArea.setScale(
                 DcrConstants.DECIMALDIGITS_MEASUREMENTS, DcrConstants.ROUNDMODE_MEASUREMENTS));
@@ -219,9 +225,6 @@ public class Far_Assam extends Far {
 
         BigDecimal plotArea = calculateTotalPlotArea(pl, surrenderRoadArea);
         LOG.debug("Calculated total plot area (including surrender road): {}", plotArea);
-
-        // All Deductions in TotalBuiltUp Area
-        farDeductions(pl, totalBuiltUpArea);
 
         BigDecimal providedFar = calculateProvidedFar(pl, plotArea);
         pl.setFarDetails(new FarDetails());
@@ -236,7 +239,7 @@ public class Far_Assam extends Far {
         return pl;
     }
 
-    private void farDeductions(Plan pl, BigDecimal totalBuiltUpArea) {
+    private BigDecimal farDeductions(Plan pl, BigDecimal totalBuiltUpArea) {
         LOG.info("Making Deductions in BuiltUpArea: "+ totalBuiltUpArea);
         BigDecimal parkingAndServiceFloorArea = BigDecimal.ZERO;
         BigDecimal totalAreaToDeduct = BigDecimal.ZERO;
@@ -248,7 +251,7 @@ public class Far_Assam extends Far {
 
         if (!matchedRule.isPresent()) {
             LOG.error("**No matching rule found for Far Deductions**");
-            return;
+            return totalBuiltUpArea;
         }
 
         FarRequirement mdmsRule = matchedRule.get();
@@ -267,18 +270,20 @@ public class Far_Assam extends Far {
         BigDecimal farProjectionLength = mdmsRule.getFarProjectionLength();
         BigDecimal farPermittedRoomAreaPercentage = mdmsRule.getFarPermittedRoomAreaPercentage();
 
-
+        BigDecimal floorWiseAreaToDeduct = BigDecimal.ZERO;
         for (Block blk : pl.getBlocks()) {
             if (!blk.getBuilding().getFloors().isEmpty())
                 for (Floor floor : blk.getBuilding().getFloors()) {
-                    farFloorWiseDeduction(pl, blk, floor, totalAreaToDeduct, parkingAndServiceFloorArea,
-                            farEntranceLobbyArea, farMaxBalconyExemption, farCorridorArea, farProjectionLength, farProjectionWidth, farPermittedRoomAreaPercentage, totalBuiltUpArea);
+                    floorWiseAreaToDeduct = floorWiseAreaToDeduct.add(farFloorWiseDeduction(pl, blk, floor, parkingAndServiceFloorArea,
+                            farEntranceLobbyArea, farMaxBalconyExemption, farCorridorArea, farProjectionLength, farProjectionWidth, farPermittedRoomAreaPercentage, totalBuiltUpArea));
                 }
         }
 
-        farCommonDeductions(pl, totalAreaToDeduct, farGuardRoomArea, farCareTakerRoomArea, farCanopyHeight, farCanopyWidth, farCanopyLength);
+        BigDecimal farCommonDeduction = farCommonDeductions(pl, farGuardRoomArea, farCareTakerRoomArea, farCanopyHeight, farCanopyWidth, farCanopyLength);
 
         validateBlockBalconies(pl, farBalconyLength, farBalconyWidth, farBalconySetback);
+
+        totalAreaToDeduct = totalAreaToDeduct.add(floorWiseAreaToDeduct).add(farCommonDeduction);
 
         // allow 30% of permissible far while excluding parking and service floor areas
         BigDecimal exemptableArea = totalAreaToDeduct.subtract(parkingAndServiceFloorArea);
@@ -295,13 +300,16 @@ public class Far_Assam extends Far {
         totalBuiltUpArea = totalBuiltUpArea.subtract(totalAreaToDeduct);
 
         LOG.info("Made All BuiltUpArea Deductions, Remaining BuiltUpArea is: " + totalBuiltUpArea);
+
+        return totalBuiltUpArea;
     }
 
-    private void farCommonDeductions(Plan pl, BigDecimal totalAreaToDeduct,
+    private BigDecimal farCommonDeductions(Plan pl,
                                      BigDecimal farGuardRoomArea, BigDecimal farCareTakerRoomArea,
                                      BigDecimal farCanopyHeight, BigDecimal farCanopyWidth,
                                      BigDecimal farCanopyLength){
         LOG.info("Running farCommonDeductions function ...");
+        BigDecimal totalAreaToDeduct = BigDecimal.ZERO;
 
         // sentry box and guard room (maximum of 3.5 sq. m each)
         BigDecimal guardRoomArea = BigDecimal.ZERO;
@@ -352,13 +360,17 @@ public class Far_Assam extends Far {
             }
         }
 
+        return totalAreaToDeduct;
     }
 
-    private void farFloorWiseDeduction(Plan pl, Block blk, Floor floor, BigDecimal totalAreaToDeduct, BigDecimal parkingAndServiceFloorArea,
+    private BigDecimal farFloorWiseDeduction(Plan pl, Block blk, Floor floor, BigDecimal parkingAndServiceFloorArea,
                                        BigDecimal farEntranceLobbyArea, BigDecimal farMaxBalconyExemption, BigDecimal farCorridorArea,
                                        BigDecimal farProjectionLength, BigDecimal farProjectionWidth, BigDecimal farPermittedRoomAreaPercentage, BigDecimal totalBuiltUpArea){
 
         LOG.info("Starting FloorWise Deduction of FAR builtUpArea...");
+
+        BigDecimal totalAreaToDeduct = BigDecimal.ZERO;
+
         // Subtracting Basement Parking area from total build up area
         if(floor.getParking() != null && floor.getParking().getBasementCars() != null) {
             for(Measurement basementCar: floor.getParking().getBasementCars()){
@@ -395,7 +407,7 @@ public class Far_Assam extends Far {
 
         // Deducted balcony area
         BigDecimal balconyArea = BigDecimal.ZERO;
-        if(!floor.getBalconies().isEmpty() || floor.getBalconies() != null) {
+        if(floor.getBalconies() != null || !floor.getBalconies().isEmpty()) {
             for (Balcony balcony : floor.getBalconies()) {
                 if(balcony.getBuiltUpArea() != null)
                     balconyArea = balconyArea.add(balcony.getBuiltUpArea());
@@ -479,6 +491,7 @@ public class Far_Assam extends Far {
             }
         }
 
+        return totalAreaToDeduct;
     }
 
     /**
@@ -535,7 +548,7 @@ public class Far_Assam extends Far {
         BigDecimal balconyLength = BigDecimal.ZERO;
         BigDecimal buildingLength = block.getBuilding().getBuildingLength();
         BigDecimal quarterBuildingLength = BigDecimal.ZERO;
-        if(!floor.getFloorProjectedBalconies().isEmpty())
+        if(floor.getFloorProjectedBalconies() != null || !floor.getFloorProjectedBalconies().isEmpty())
             for (BigDecimal projectedBalcony : floor.getFloorProjectedBalconies()) {
                 if (projectedBalcony != null && balconyLength.compareTo(projectedBalcony) < 0)
                     balconyLength = projectedBalcony;

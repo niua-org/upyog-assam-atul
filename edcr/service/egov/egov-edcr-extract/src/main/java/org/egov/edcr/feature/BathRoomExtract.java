@@ -56,6 +56,11 @@ public class BathRoomExtract extends FeatureExtract {
                           ventilationMeasurements = new ArrayList<>();
                        }
                     rooms = Util.getPolyLinesByLayer(planDetail.getDoc(), layerName);
+
+                    // Setting total no of bathrooms in plan detail
+                    int noOfRooms = rooms.size();
+                    planDetail.setTotalBathrooms(BigDecimal.valueOf(noOfRooms));
+
                     roomMeasurements = rooms.stream()
                             .map(flightPolyLine -> new MeasurementDetail(flightPolyLine, true)).collect(Collectors.toList());
                     f.setBathRoom(new Room());

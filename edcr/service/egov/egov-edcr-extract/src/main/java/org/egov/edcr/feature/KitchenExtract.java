@@ -107,6 +107,9 @@ public class KitchenExtract extends FeatureExtract {
                             floor.setKitchen(kitchen);
                         }
 
+                        int noOfResidentialKitchens = residentialKitchenPolyLines.size();
+                        pl.setTotalKitchens(BigDecimal.valueOf(noOfResidentialKitchens));
+
                     }
         if (LOG.isDebugEnabled())
             LOG.debug("End of Kitchen Room Extract......");
