@@ -11,8 +11,8 @@ const ApplicantDetails = ({ t, config, onSelect, formData, searchResult }) => {
   const [emailId, setEmail] = useState(formData?.applicant?.emailId || searchResult?.landInfo?.owners?.[0]?.emailId || "");
   const [mobileNumber, setMobileNumber] = useState(formData?.applicant?.mobileNumber ||  searchResult?.landInfo?.owners?.[0]?.mobileNumber || user?.mobileNumber);
   const [alternateNumber, setAltMobileNumber] = useState(formData?.applicant?.alternateNumber || searchResult?.landInfo?.owners?.[0]?.alternateNumber || "");
-  const [fatherName, setFatherName] = useState(formData?.applicant?.fatherName || "");
-  const [motherName, setMotherName] = useState(formData?.applicant?.motherName || "");
+  const [fatherName, setFatherName] = useState(formData?.applicant?.fatherName || searchResult?.landInfo?.owners?.[0]?.fatherOrHusbandName || "");
+  const [motherName, setMotherName] = useState(formData?.applicant?.motherName || searchResult?.landInfo?.owners?.[0]?.motherName ||"");
   const [panCardNumber, setPanCardNumber] = useState(formData?.applicant?.panCardNumber || searchResult?.landInfo?.owners?.[0]?.pan || "");
   const [aadhaarNumber, setAadhaarNumber] = useState(formData?.applicant?.aadhaarNumber || searchResult?.landInfo?.owners?.[0]?.aadhaarNumber ||"");
 
