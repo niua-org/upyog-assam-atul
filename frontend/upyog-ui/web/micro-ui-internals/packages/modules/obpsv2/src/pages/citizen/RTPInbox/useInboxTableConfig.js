@@ -1,13 +1,24 @@
-import React, { Fragment, useMemo } from "react"
+import React, { Fragment, useMemo, useState, useEffect } from "react"
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { useTranslation } from "react-i18next";
-import { Dropdown } from "@upyog/digit-ui-react-components";
+import { Dropdown, Toast } from "@upyog/digit-ui-react-components";
 import { OBPSV2Services } from "../../../../../../libraries/src/services/elements/OBPSV2";
 const useInboxTableConfig = ({ parentRoute, onPageSizeChange, formState, totalCount, table, dispatch, onSortingByData}) => {
     const GetCell = (value) => <span className="cell-text styled-cell">{value}</span>;
     const GetStatusCell = (value) => value === "CS_NA" ? t(value) : value === "Active" || value>0 ? <span className="sla-cell-success">{value}</span> : <span className="sla-cell-error">{value}</span> 
     const { t } = useTranslation()
+    const [error, setError] = useState(null);
+    const [showToast, setShowToast] = useState(false);
+    useEffect(() => {
+        if (showToast || error) {
+          const timer = setTimeout(() => {
+            setShowToast(false);
+            setError(null)
+          }, 2000); // Close toast after 2 seconds
+          return () => clearTimeout(timer); // Clear timer on cleanup
+        }
+      }, [showToast, error]);
     
     const tableColumnConfig = useMemo(() => {
         return [
@@ -19,7 +30,7 @@ const useInboxTableConfig = ({ parentRoute, onPageSizeChange, formState, totalCo
                 
             return (
                 <div>
-                <Link to={window.location.href.includes("/citizen") ? `${parentRoute}/bpa/${row?.original["applicationId"]}` : `${parentRoute}/inbox/bpa/${row.original["applicationId"]}`}>
+                <Link to={window.location.href.includes("/citizen") ? `${parentRoute}/application/${row?.original["applicationId"]}/${row?.original["tenantId"]}` : `${parentRoute}/inbox/bpa/${row.original["applicationId"]}`}>
                     <span className="link">{row?.original["applicationId"]||"NA"}</span>
                 </Link>
                 </div>
@@ -41,11 +52,6 @@ const useInboxTableConfig = ({ parentRoute, onPageSizeChange, formState, totalCo
             accessor: "mobileNumber",
             Cell: ({row}) => row?.original?.mobileNumber
             },
-        {
-            Header: t("ES_INBOX_LOCALITY"),
-            accessor: (row) => t(row?.original?.locality),
-            Cell: ({row}) => row?.original?.locality,
-        },
         {
             Header: t("WARD_NUMBER"),
             accessor: "wardNo",
@@ -69,7 +75,8 @@ const useInboxTableConfig = ({ parentRoute, onPageSizeChange, formState, totalCo
 
                 
                 const handleSelect = async (value) => {
-                if (value.code === "APPROVE") {
+                let selectedAction = value.code;
+                if (value.code === "EDIT") {
                     window.location.href = `${parentRoute}/editApplication/${row?.original["applicationId"]}`;
                 } else if (value.code === "View Summary") {
                     window.location.href = `${parentRoute}/application/${row?.original["applicationId"]}/${row?.original["tenantId"]}`;
@@ -83,17 +90,33 @@ const useInboxTableConfig = ({ parentRoute, onPageSizeChange, formState, totalCo
                         config: { staleTime: Infinity, cacheTime: Infinity }
                     });
                 
-                    if(bpaDetails?.bpa){
-                        // bpaDetails.bpa[0].workflow.action = "APPROVE";
-                        //     bpaDetails.bpa[0].workflow.assignes = null;
-                        //     bpaDetails.bpa[0].workflow.comments = null;
-                        const response = await OBPSV2Services.update(bpaDetails, tenantId);
+                    if(bpaDetails?.bpa?.[0]){
+                        bpaDetails.bpa[0].workflow = {
+                        ...(bpaDetails.bpa[0].workflow || {}),
+                        action: selectedAction,
+                        assignes: null,
+                        comments: null,
+                        };
+                        try {
+                            const response = await OBPSV2Services.update({BPA : bpaDetails?.bpa[0]}, tenantId);
+                            setShowToast(true);
+                            //
+                            
+                            return response;
+                        }
+                        catch(error){
+                            setError(error?.response?.data?.Errors[0].message)
+                            throw new Error(error?.response?.data?.Errors[0].message);
+                        }
+
+                        
                     }
                     
                 }
                  };
 
                 return (
+                    <React.Fragment>
                 <Dropdown
                     t={t}
                     option={options}
@@ -103,6 +126,17 @@ const useInboxTableConfig = ({ parentRoute, onPageSizeChange, formState, totalCo
                     select={handleSelect}
                     placeholder={t("Take Action")}
                 />
+                {(showToast||error) && (
+                        <Toast
+                          error={error ? error : null}
+                          
+                          label={error ? error : t(`ACTION_UPDATE_DONE_SUCCESSFULLY`)}
+                          onClose={() => {
+                            setShowToast(false);
+                          }}
+                        />
+                      )}
+                      </React.Fragment>
                 );
             },
             }

@@ -1,4 +1,6 @@
 import { v4 as uuid_v4 } from 'uuid';
+import cloneDeep from "lodash/cloneDeep";
+import { OBPSV2Services } from '../../../../libraries/src/services/elements/OBPSV2';
 export const convertDateToEpoch = (dateString, dayStartOrEnd = "dayend") => {
   //example input format : "2018-10-02"
   try {
@@ -48,7 +50,7 @@ export const checkForNA = (value = "") => {
   return checkForNotNull(value) ? value : "CS_NA";
 };
 
-export const bpaPayload = (data) => {
+export const bpaPayload = async(data) => {
 
 
   // Permanent Address
@@ -91,8 +93,9 @@ export const bpaPayload = (data) => {
       businessService: "bpa-services",
       status: "INITIATED",
       additionalDetails: {
+        constructionType: data?.land?.constructionType?.code,
         adjoiningOwners: data?.land?.adjoiningOwners,
-        futureProvisions: data?.land?.futureProvisions?.horizontalExtension?.code,
+        futureProvisions: data?.land?.futureProvisions,
         todBenefits: data?.land?.todBenefits?.code,
         todWithTdr: data?.land?.todWithTdr?.code,
         todZone: data?.land?.todZone?.code,
@@ -182,69 +185,83 @@ export const bpaPayload = (data) => {
   return formdata;
 };
 
-export const bpaEditPayload = (data) =>{
-  const formdata={
-    BPA: {
-        tenantId: data?.tenantId,
-        areaMapping:{
-          buildingPermitAuthority: data?.areaMapping?.bpAuthority?.code,
-          district: data?.areaMapping?.district?.code,
-          mouza: data?.areaMapping?.mouza?.code || data?.areaMapping?.mouza,
-          planningArea: data?.areaMapping?.planningArea?.code,
-          planningPermitAuthority: data?.areaMapping?.ppAuthority?.code,
-          revenueVillage: data?.areaMapping?.revenueVillage?.code,
-          ward: data?.areaMapping?.ward
-        },
-
-        documents: data?.land?.documents?.map((doc) =>({
-          ...doc,
-        })) || [],
-        
-        landInfo:{
-          address:{
-            addressLine1: data?.address?.permanent?.addressLine1,
-            addressLine2: data?.address?.permanent?.addressLine2,
-            city: data?.address?.permanent?.city?.code,
-            country: "INDIA",
-            district: data?.address?.permanent?.district?.code,
-            houseNo: data?.address?.permanent?.houseNo,
-            pincode: data?.address?.permanent?.pincode,
-            state: data?.address?.permanent?.state?.code,
-            tenantId: data?.tenantId
-          },
-            documents: data?.land?.documents?.map((doc) =>({
-              ...doc,
-            })) || [],
-            newDagNumber: data?.land?.newDagNumber,
-            newPattaNumber: data?.land?.newPattaNumber,
-            oldDagNumber: data?.land?.oldDagNumber,
-            oldPattaNumber: data?.land?.oldPattaNumber,
-            totalPlotArea: data?.land?.totalPlotArea,
-            owners:{
-              aadhaarNumber: data?.applicant?.aadhaarNumber,
-              panNumber:data?.applicant?.panCardNumber,
-              mobileNumber: data?.applicant?.mobileNumber,
-              altContactNumber: data?.applicant?.alternateNumber,
-              name: data?.applicant?.applicantName,
-              emailId: data?.applicant?.emailId,
-              fatherOrHusbandName: data?.applicant?.fatherName,
-              motherName: data?.applicant?.motherName
-            },
-            rtpDetails:{
-              rtpCategory: data?.land?.rtpCategory?.code,
-              rtpName: data?.land?.registeredTechnicalPerson?.code
-            },
-            units:{
-              occupancyType: data?.land?.occupancyType?.code,
-            }
-          },
-        workflow:{
-          action:"APPLY",
-          comments:""
-        }
-    },
+export const bpaEditPayload = async (formData) => { 
+  const applicationNo = window.location.pathname.split("/").find((seg, i, arr) => arr[i - 1] === "editApplication");
+  const tenantId = formData.tenantId
+  const searchRes = await OBPSV2Services.search({
+    tenantId,
+    filters: { applicationNo },
+    config: { staleTime: Infinity, cacheTime: Infinity }
+  });
+  const existingBPA = searchRes?.bpa?.[0];
+  if (!existingBPA) throw new Error("BPA not found for update");
+  const updated = cloneDeep(existingBPA);
+  if (formData?.land) {
+    updated.landInfo = {
+      ...updated.landInfo,
+      oldDagNumber: formData.land.oldDagNumber ?? updated.landInfo.oldDagNumber,
+      newDagNumber: formData.land.newDagNumber ?? updated.landInfo.newDagNumber,
+      oldPattaNumber: formData.land.oldPattaNumber ?? updated.landInfo.oldPattaNumber,
+      newPattaNumber: formData.land.newPattaNumber ?? updated.landInfo.newPattaNumber,
+      totalPlotArea: formData.land.totalPlotArea ?? updated.landInfo.totalPlotArea,
+      units: formData.land.units ?? updated.landInfo.units,
+      documents: formData.land.documents ?? updated.landInfo.documents,
+      address: formData.land.address ?? updated.landInfo.address,
+      ownerAddresses:[]
+    };
+  }
+  if (formData?.applicant && updated.landInfo?.owners?.length > 0) {
+    updated.landInfo.owners[0] = {
+      ...updated.landInfo.owners[0],
+      name: formData.applicant.applicantName ?? updated.landInfo.owners[0].name,
+      mobileNumber: formData.applicant.mobileNumber ?? updated.landInfo.owners[0].mobileNumber,
+      aadhaarNumber: formData.applicant.aadhaarNumber ?? updated.landInfo.owners[0].aadhaarNumber,
+      pan: formData.applicant.panCardNumber ?? updated.landInfo.owners[0].pan,
+      emailId: formData.applicant.emailId ?? updated.landInfo.owners[0].emailId,
+      fatherOrHusbandName: formData.applicant.fatherName ?? updated.landInfo.owners[0].fatherOrHusbandName,
+      motherName: formData.applicant.motherName ?? updated.landInfo.owners[0].motherName,
+      permanentAddress: formData.applicant.permanentAddress ?? updated.landInfo.owners[0].permanentAddress,
+      correspondenceAddress: formData.applicant.correspondenceAddress ?? updated.landInfo.owners[0].correspondenceAddress,
+      //documents: searchRes?.landInfo?.owners[0]?.documents
+    };
+  }
+  if (formData?.areaMapping) {
+    updated.areaMapping = {
+      ...updated.areaMapping,
+      district: formData.areaMapping.district?.code ?? updated.areaMapping.district,
+      planningArea: formData.areaMapping.planningArea?.code ?? updated.areaMapping.planningArea,
+      ward: formData.areaMapping.ward ?? updated.areaMapping.ward,
+      mouza: (formData.areaMapping.mouza?.code ? formData.areaMapping.mouza?.code : formData.areaMapping.mouza) ?? (updated.areaMapping.mouza?.code ? updated.areaMapping.mouza?.code : updated.areaMapping.mouza),
+      revenueVillage: (formData.areaMapping.revenueVillage?.code ? formData.areaMapping.revenueVillage?.code : formData.areaMapping.revenueVillage) ?? (updated.areaMapping.revenueVillage?.code ? updated?.areaMapping?.revenueVillage?.code : updated?.areaMapping?.revenueVillage),
+      buildingPermitAuthority: formData.areaMapping.buildingPermitAuthority ?? (updated.areaMapping.buildingPermitAuthority?.code ? updated.areaMapping.buildingPermitAuthority?.code : updated.areaMapping.buildingPermitAuthority),
+      planningPermitAuthority: (formData.areaMapping.ppAuthority?.code ? formData.areaMapping.ppAuthority?.code : formData.areaMapping.ppAuthority) ?? (updated.areaMapping.planningPermitAuthority?.code ? updated.areaMapping.planningPermitAuthority?.code : updated.areaMapping.planningPermitAuthority)
+    };
+  }
+  if (formData?.rtpDetails) {
+    updated.rtpDetails = {
+      ...updated.rtpDetails,
+      rtpCategory: formData.rtpDetails.rtpCategory ?? updated.rtpDetails.rtpCategory,
+      rtpName: formData.rtpDetails.rtpName ?? updated.rtpDetails.rtpName,
+      rtpUUID: formData.rtpDetails.rtpUUID ?? updated.rtpDetails.rtpUUID
+    };
+  }
+  if (formData?.additionalDetails) {
+    updated.additionalDetails = {
+      ...updated.additionalDetails,
+      ...formData.additionalDetails
+    };
+  }
+  if (formData?.documents) {
+    updated.documents = formData?.documents?.documents
+  }
+  updated.status = "EDIT_APPLICATION";
+  updated.workflow = {
+    action: "EDIT",
+    comments: ""
   };
-  return formdata;
+  return {
+    BPA: updated,
+  };
 };
 
 

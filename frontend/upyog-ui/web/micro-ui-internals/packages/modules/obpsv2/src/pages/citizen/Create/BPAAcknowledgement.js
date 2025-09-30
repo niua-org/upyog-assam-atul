@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { bpaPayload } from "../../../utils";
+import { bpaEditPayload } from "../../../utils";
 // import getBPAAcknowledgementData from "../../../utils/getBPAAcknowledgementData";
 
 const GetActionMessage = (props) => {
@@ -44,13 +45,18 @@ const BPAAcknowledgement = ({ data, onSuccess }) => {
   const [showToast, setShowToast] = useState(null);
 
   useEffect(() => {
-    try {
-      data.tenantId = tenantId;
-      let formdata = bpaPayload(data);
-      mutation.mutate(formdata, { onSuccess });
-    } catch (err) {
-      setShowToast({ error: true, label: t("BPA_APPLICATION_SUBMIT_ERROR") });
-    }
+    const submit = async () => {
+      try {
+        data.tenantId = tenantId;
+        const formdata = window.location.href.includes("editApplication")
+          ? await bpaEditPayload(data)
+          : await bpaPayload(data);
+        mutation.mutate(formdata, { onSuccess });
+      } catch (err) {
+        setShowToast({ error: true, label: t("BPA_APPLICATION_SUBMIT_ERROR") });
+      }
+    };
+    submit();
   }, []);
 
   useEffect(() => {

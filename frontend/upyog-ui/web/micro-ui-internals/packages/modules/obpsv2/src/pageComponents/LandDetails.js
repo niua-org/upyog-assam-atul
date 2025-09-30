@@ -64,7 +64,7 @@ const LandDetails = ({ t, config, onSelect, formData, searchResult }) => {
           i18nKey: constructionTypes.code,
         }));
         setConstructionTypeOptions(formattedConstructionTypes);
-        console.log("first",formattedConstructionTypes);
+        
       }
       if(mdmsData?.rtpCategories){
         const formattedRtpCategories = mdmsData.rtpCategories.map((rtpCategories) => ({
@@ -80,44 +80,45 @@ const LandDetails = ({ t, config, onSelect, formData, searchResult }) => {
   const landData = formData?.land || {};
 
   // Construction Type
-  const [constructionType, setConstructionType] = useState(landData?.constructionType || "");
+  const [constructionType, setConstructionType] = useState(landData?.constructionType || constructionTypeOptions.find(opt => opt.code === searchResult?.landInfo?.constructionType)|| "");
 
   // Land Record Numbers
-  const [oldDagNumber, setOldDagNumber] = useState(landData?.oldDagNumber || "");
-  const [newDagNumber, setNewDagNumber] = useState(landData?.newDagNumber || "");
-  const [oldPattaNumber, setOldPattaNumber] = useState(landData?.oldPattaNumber || "");
-  const [newPattaNumber, setNewPattaNumber] = useState(landData?.newPattaNumber || "");
-  const [totalPlotArea, setTotalPlotArea] = useState(landData?.totalPlotArea || "");
+  const [oldDagNumber, setOldDagNumber] = useState(landData?.oldDagNumber || searchResult?.landInfo?.oldDagNumber ||"");
+  const [newDagNumber, setNewDagNumber] = useState(landData?.newDagNumber || searchResult?.landInfo?.newDagNumber ||"");
+  const [oldPattaNumber, setOldPattaNumber] = useState(landData?.oldPattaNumber || searchResult?.landInfo?.oldPattaNumber|| "");
+  const [newPattaNumber, setNewPattaNumber] = useState(landData?.newPattaNumber || searchResult?.landInfo?.newPattaNumber || "");
+  const [totalPlotArea, setTotalPlotArea] = useState(landData?.totalPlotArea || searchResult?.landInfo?.totalPlotArea ||"");
 
   // Adjoining Land Owners
-  const [northOwner, setNorthOwner] = useState(landData?.adjoiningOwners?.north || "");
-  const [southOwner, setSouthOwner] = useState(landData?.adjoiningOwners?.south || "");
-  const [eastOwner, setEastOwner] = useState(landData?.adjoiningOwners?.east || "");
-  const [westOwner, setWestOwner] = useState(landData?.adjoiningOwners?.west || "");
+  const [northOwner, setNorthOwner] = useState(landData?.adjoiningOwners?.north || searchResult?.additionalDetails?.adjoiningOwners?.north || "");
+  const [southOwner, setSouthOwner] = useState(landData?.adjoiningOwners?.south || searchResult?.additionalDetails?.adjoiningOwners?.south|| "");
+  const [eastOwner, setEastOwner] = useState(landData?.adjoiningOwners?.east || searchResult?.additionalDetails?.adjoiningOwners?.east || "");
+  const [westOwner, setWestOwner] = useState(landData?.adjoiningOwners?.west || searchResult?.additionalDetails?.adjoiningOwners?.west || "");
 
   // Future Provisions
-  const [verticalExtension, setVerticalExtension] = useState(landData?.futureProvisions?.verticalExtension || "NO");
-  const [verticalExtensionArea, setVerticalExtensionArea] = useState(landData?.futureProvisions?.verticalExtensionArea || "");
-  const [horizontalExtension, setHorizontalExtension] = useState(landData?.futureProvisions?.horizontalExtension || "NO");
-  const [horizontalExtensionArea, setHorizontalExtensionArea] = useState(landData?.futureProvisions?.horizontalExtensionArea || "");
+  const [verticalExtension, setVerticalExtension] = useState(landData?.futureProvisions?.verticalExtension|| searchResult?.landInfo?.verticalExtension || "NO");
+  const [verticalExtensionArea, setVerticalExtensionArea] = useState(landData?.futureProvisions?.verticalExtensionArea || searchResult?.landInfo?.verticalExtensionArea|| "");
+  const [horizontalExtension, setHorizontalExtension] = useState(landData?.futureProvisions?.horizontalExtension || searchResult?.landInfo?.horizontalExtension || "NO");
+  const [horizontalExtensionArea, setHorizontalExtensionArea] = useState(landData?.futureProvisions?.horizontalExtensionArea || searchResult?.landInfo?.horizontalExtensionArea|| "");
 
   // RTP and Occupancy
-  const [rtpCategory, setRtpCategory] = useState(landData?.rtpCategory || "");
-  const [registeredTechnicalPerson, setRegisteredTechnicalPerson] = useState(landData?.registeredTechnicalPerson || "");
-  const [occupancyType, setOccupancyType] = useState(landData?.occupancyType || "");
+  const searchResultRTPCategory = rtpCategoryOptions.find(opt => opt.i18nKey === searchResult?.rtpDetails?.rtpCategory)
+  const [rtpCategory, setRtpCategory] = useState(landData?.rtpCategory || searchResultRTPCategory||"");
+  const [registeredTechnicalPerson, setRegisteredTechnicalPerson] = useState(landData?.registeredTechnicalPerson || rtpOptions.find(opt => opt.name === searchResult?.rtpDetails?.rtpName) ||"");
+  const [occupancyType, setOccupancyType] = useState(landData?.occupancyType || occupancyTypeOptions.find(opt => opt.code === searchResult?.landInfo?.units?.[0]?.occupancyType) || "");
 
   // TOD Benefits
-  const [todBenefits, setTodBenefits] = useState(landData?.todBenefits || "NO");
-  const [todWithTdr, setTodWithTdr] = useState(landData?.todWithTdr || false);
+  const [todBenefits, setTodBenefits] = useState(landData?.todBenefits || futureProvisionOptions.find(opt => opt.code === searchResult?.additionalDetails?.todBenefits)  ||"NO");
+  const [todWithTdr, setTodWithTdr] = useState(landData?.todWithTdr ||  false);
   const [todZone, setTodZone] = useState(landData?.todZone || "");
-  const [tdrUsed, setTdrUsed] = useState(landData?.tdrUsed || "NO");
-  const [todAcknowledgement, setTodAcknowledgement] = useState(landData?.todAcknowledgement || false);
+  const [tdrUsed, setTdrUsed] = useState(landData?.tdrUsed || futureProvisionOptions.find(opt => opt.code === searchResult?.additionalDetails?.tdrUsed)||"NO");
+  const [todAcknowledgement, setTodAcknowledgement] = useState(landData?.todAcknowledgement || searchResult?.additionalDetails?.todAcknowledgement||false);
 
   // File upload states
   const [isUploadingForm36, setIsUploadingForm36] = useState(false);
   const [isUploadingForm39, setIsUploadingForm39] = useState(false);
-  const [uploadedForm36Id, setUploadedForm36Id] = useState(landData?.documents?.find(doc => doc.documentType === 'FORM_36') || null);
-  const [uploadedForm39Id, setUploadedForm39Id] = useState(landData?.documents?.find(doc => doc.documentType === 'FORM_39') || null);
+  const [uploadedForm36Id, setUploadedForm36Id] = useState(landData?.documents?.find(doc => doc.documentType === 'FORM_36') || searchResult?.documents.find(doc => doc.documentType === 'FORM_36')|| null);
+  const [uploadedForm39Id, setUploadedForm39Id] = useState(landData?.documents?.find(doc => doc.documentType === 'FORM_39') || searchResult?.documents.find(doc => doc.documentType === 'FORM_39')|| null);
   const [form36File, setForm36File] = useState(null);
   const [form39File, setForm39File] = useState(null);
   const [showToast, setShowToast] = useState(null);
@@ -154,7 +155,7 @@ const LandDetails = ({ t, config, onSelect, formData, searchResult }) => {
             setIsUploadingForm36(true);
             const response = await Digit.UploadServices.Filestorage("OBPSV2", form36File, Digit.ULBService.getStateId());
             if (response?.data?.files?.length > 0) {
-              setUploadedForm36Id(response?.data?.files[0]?.fileStoreId);
+              setUploadedForm36Id({ documentType: "FORM_36", documentUid: response?.data?.files[0]?.fileStoreId,  fileStoreId: response?.data?.files[0]?.fileStoreId});
             } else {
               setShowToast({ error: true, label: "CS_FILE_UPLOAD_ERROR" });
             }
@@ -180,7 +181,7 @@ const LandDetails = ({ t, config, onSelect, formData, searchResult }) => {
             setIsUploadingForm39(true);
             const response = await Digit.UploadServices.Filestorage("OBPSV2", form39File, Digit.ULBService.getStateId());
             if (response?.data?.files?.length > 0) {
-              setUploadedForm39Id(response?.data?.files[0]?.fileStoreId);
+              setUploadedForm39Id({ documentType: "FORM_39", documentUid: response?.data?.files[0]?.fileStoreId,  fileStoreId: response?.data?.files[0]?.fileStoreId});
             } else {
               setShowToast({ error: true, label: "CS_FILE_UPLOAD_ERROR" });
             }
@@ -196,25 +197,7 @@ const LandDetails = ({ t, config, onSelect, formData, searchResult }) => {
 
   // Go next function
   const goNext = () => {
-    const documents = [];
-    
-    if (uploadedForm36Id) {
-      documents.push({
-        documentType: "FORM_36",
-        documentUid: uploadedForm36Id,
-        fileStoreId: uploadedForm36Id,
-        id: uploadedForm36Id
-      });
-    }
-    
-    if (uploadedForm39Id) {
-      documents.push({
-        documentType: "FORM_39",
-        documentUid: uploadedForm39Id,
-        fileStoreId: uploadedForm39Id,
-        id: uploadedForm39Id
-      });
-    }
+    const documents = [uploadedForm36Id, uploadedForm39Id].filter(Boolean);
 
     let landStep = {
       constructionType,
@@ -231,9 +214,9 @@ const LandDetails = ({ t, config, onSelect, formData, searchResult }) => {
       },
       futureProvisions: {
         verticalExtension,
-        verticalExtensionArea: verticalExtension === "YES" ? verticalExtensionArea : "",
+        verticalExtensionArea: verticalExtension?.code === "YES" ? verticalExtensionArea : "",
         horizontalExtension,
-        horizontalExtensionArea: horizontalExtension === "YES" ? horizontalExtensionArea : ""
+        horizontalExtensionArea: horizontalExtension?.code === "YES" ? horizontalExtensionArea : ""
       },
       rtpCategory,
       registeredTechnicalPerson,
