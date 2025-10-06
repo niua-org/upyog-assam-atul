@@ -36,7 +36,7 @@ const useBPAV2Search = (tenantId, filters = {}, config = {}) => {
   const userInformation = userInfo?.value?.info;
 
   if (window.location.href.includes("/citizen") && window.location.href.includes("/search")) {
-    if (!filters?.createdBy && !window.location.href.includes("obpsv2-application")) filters.createdBy = userInformation?.uuid;
+    //if (!filters?.createdBy && !window.location.href.includes("obpsv2-application")) filters.createdBy = userInformation?.uuid;
     if (!filters?.applicationType) filters.applicationType = "NEW_CONSTRUCTION";
     // if (!filters?.serviceType) filters.serviceType = "NEW_CONSTRUCTION";
   }
