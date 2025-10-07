@@ -52,27 +52,7 @@ public class ParkingExtract extends FeatureExtract {
             LOGGER.debug("Starting of Parking Extract......");
         for (Block block : pl.getBlocks()) {
             for (Floor floor : block.getBuilding().getFloors()) {
-                String layerRegEx = layerNames.getLayerName("LAYER_NAME_BLOCK_NAME_PREFIX") + block.getNumber() + "_"
-                        + layerNames.getLayerName("LAYER_NAME_FLOOR_NAME_PREFIX") + floor.getNumber() + "_"
-                        + layerNames.getLayerName("LAYER_NAME_UNIT") + "_" + "\\d";
-                
-                List<String> layerNamesUnit = Util.getLayerNamesLike(pl.getDoc(), layerRegEx);
-               
-                List<DXFLWPolyline> occupancyUnits = new ArrayList<>();
-                for (String layerName : layerNamesUnit) {
-                    occupancyUnits.addAll(Util.getPolyLinesByLayer(pl.getDoc(), layerName));
-                    int unitNo = Integer.valueOf(layerName.split("_")[5]);
 
-                    FloorUnit unit = floor.getUnitNumber(unitNo);
-                    if (unit == null) {
-                        unit = new FloorUnit();
-                        unit.setUnitNumber(unitNo);
-                        floor.getUnits().add(unit);
-                    }
-                    extractByLayer(pl, pl.getDoc(), block, floor, unit, occupancyUnits);
-                }
-               
-              // extractByLayer(pl, pl.getDoc(), block, floor, occupancyUnits);
                 String coveredParkLayer = layerNames.getLayerName("LAYER_NAME_BLOCK_NAME_PREFIX") + block.getNumber()
                         + "_" + layerNames.getLayerName("LAYER_NAME_FLOOR_NAME_PREFIX") + floor.getNumber() + "_"
                         + layerNames.getLayerName("LAYER_NAME_COVERED_PARKING");
@@ -241,49 +221,6 @@ public class ParkingExtract extends FeatureExtract {
 	 * floorUnit.setTotalUnitDeduction(deduction); floorUnits.add(floorUnit); }
 	 * floor.setUnits(floorUnits); } }
 	 */
-    
-    private void extractByLayer(PlanDetail pl, DXFDocument doc, Block block, Floor floor,
-            FloorUnit unit, List<DXFLWPolyline> dxflwPolylines) {
-if (!dxflwPolylines.isEmpty()) {
-			BigDecimal totalDeduction = BigDecimal.ZERO;
-			
-			for (DXFLWPolyline flrUnitPLine : dxflwPolylines) {
-			unit.setColorCode(flrUnitPLine.getColor());
-			
-			Occupancy occupancy = new Occupancy();
-			Util.setOccupancyType(flrUnitPLine, occupancy);
-			occupancy.setTypeHelper(Util.findOccupancyType(flrUnitPLine, pl));
-			specialCaseCheckForOccupancyType(flrUnitPLine, occupancy);
-			unit.setOccupancy(occupancy);
-			
-			unit.setArea(Util.getPolyLineArea(flrUnitPLine));
-			
-			// Deduction logic
-			Polygon polygon = Util.getPolygon(flrUnitPLine);
-			String deductLayerName = layerNames.getLayerName("LAYER_NAME_BLOCK_NAME_PREFIX") + block.getNumber()
-			    + "_" + layerNames.getLayerName("LAYER_NAME_FLOOR_NAME_PREFIX") + floor.getNumber() + "_"
-			    + layerNames.getLayerName("LAYER_NAME_UNITFA_DEDUCT");
-			
-			for (DXFLWPolyline occupancyDeduct : Util.getPolyLinesByLayer(doc, deductLayerName)) {
-			boolean contains = false;
-			Iterator buildingIterator = occupancyDeduct.getVertexIterator();
-			while (buildingIterator.hasNext()) {
-			    DXFVertex dxfVertex = (DXFVertex) buildingIterator.next();
-			    Point point = dxfVertex.getPoint();
-			    if (rayCasting.contains(point, polygon)) {
-			        contains = true;
-			        MeasurementDetail measurement = new MeasurementDetail();
-			        measurement.setPolyLine(occupancyDeduct);
-			        measurement.setArea(Util.getPolyLineArea(occupancyDeduct));
-			        unit.getDeductions().add(measurement);
-			        totalDeduction = totalDeduction.add(Util.getPolyLineArea(occupancyDeduct));
-			    }
-			}
-}
-}
-unit.setTotalUnitDeduction(totalDeduction);
-}
-}
 
 
     private void specialCaseCheckForOccupancyType(DXFLWPolyline pLine, Occupancy occupancy) {

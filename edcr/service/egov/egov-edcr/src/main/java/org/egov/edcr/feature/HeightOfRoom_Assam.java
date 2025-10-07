@@ -168,10 +168,11 @@ public class HeightOfRoom_Assam extends HeightOfRoom {
 						scrutinyDetail.addColumnHeading(1, RULE_NO);
 						scrutinyDetail.addColumnHeading(2, DESCRIPTION);
 						scrutinyDetail.addColumnHeading(3, FLOOR);
-						scrutinyDetail.addColumnHeading(4, Room);
-						scrutinyDetail.addColumnHeading(5, REQUIRED);
-						scrutinyDetail.addColumnHeading(6, PROVIDED);
-						scrutinyDetail.addColumnHeading(7, STATUS);
+						scrutinyDetail.addColumnHeading(4, UNIT);
+						scrutinyDetail.addColumnHeading(5, Room);
+						scrutinyDetail.addColumnHeading(6, REQUIRED);
+						scrutinyDetail.addColumnHeading(7, PROVIDED);
+						scrutinyDetail.addColumnHeading(8, STATUS);
 
 						scrutinyDetail.setKey(BLOCK + block.getNumber() + UNDERSCORE + MdmsFeatureConstants.ROOM);
 
@@ -201,7 +202,7 @@ public class HeightOfRoom_Assam extends HeightOfRoom {
 						scrutinyDetail5.addColumnHeading(1, RULE_NO);
 						scrutinyDetail5.addColumnHeading(2, DESCRIPTION);
 						scrutinyDetail5.addColumnHeading(3, FLOOR);
-						scrutinyDetail2.addColumnHeading(4, UNIT);
+						scrutinyDetail5.addColumnHeading(4, UNIT);
 						scrutinyDetail5.addColumnHeading(5, Room);
 						scrutinyDetail5.addColumnHeading(6, REQUIRED);
 						scrutinyDetail5.addColumnHeading(7, PROVIDED);
@@ -224,7 +225,7 @@ public class HeightOfRoom_Assam extends HeightOfRoom {
 						scrutinyDetail4.addColumnHeading(1, RULE_NO);
 						scrutinyDetail4.addColumnHeading(2, DESCRIPTION);
 						scrutinyDetail4.addColumnHeading(3, FLOOR);
-						scrutinyDetail2.addColumnHeading(4, UNIT);
+						scrutinyDetail4.addColumnHeading(4, UNIT);
 						scrutinyDetail4.addColumnHeading(5, Room);
 						scrutinyDetail4.addColumnHeading(6, REQUIRED);
 						scrutinyDetail4.addColumnHeading(7, PROVIDED);
@@ -236,7 +237,7 @@ public class HeightOfRoom_Assam extends HeightOfRoom {
 						scrutinyDetail6.addColumnHeading(1, RULE_NO);
 						scrutinyDetail6.addColumnHeading(2, DESCRIPTION);
 						scrutinyDetail6.addColumnHeading(3, FLOOR);
-						scrutinyDetail2.addColumnHeading(4, UNIT);
+						scrutinyDetail6.addColumnHeading(4, UNIT);
 						scrutinyDetail6.addColumnHeading(5, Room);
 						scrutinyDetail6.addColumnHeading(6, REQUIRED);
 						scrutinyDetail6.addColumnHeading(7, PROVIDED);
@@ -248,7 +249,7 @@ public class HeightOfRoom_Assam extends HeightOfRoom {
 						scrutinyDetail7.addColumnHeading(1, RULE_NO);
 						scrutinyDetail7.addColumnHeading(2, DESCRIPTION);
 						scrutinyDetail7.addColumnHeading(3, FLOOR);
-						scrutinyDetail2.addColumnHeading(4, UNIT);
+						scrutinyDetail7.addColumnHeading(4, UNIT);
 						scrutinyDetail7.addColumnHeading(5, Room);
 						scrutinyDetail7.addColumnHeading(6, REQUIRED);
 						scrutinyDetail7.addColumnHeading(7, PROVIDED);
@@ -260,7 +261,7 @@ public class HeightOfRoom_Assam extends HeightOfRoom {
 						scrutinyDetail8.addColumnHeading(1, RULE_NO);
 						scrutinyDetail8.addColumnHeading(2, DESCRIPTION);
 						scrutinyDetail8.addColumnHeading(3, FLOOR);
-						scrutinyDetail2.addColumnHeading(4, UNIT);
+						scrutinyDetail8.addColumnHeading(4, UNIT);
 						scrutinyDetail8.addColumnHeading(5, Room);
 						scrutinyDetail8.addColumnHeading(6, REQUIRED);
 						scrutinyDetail8.addColumnHeading(7, PROVIDED);

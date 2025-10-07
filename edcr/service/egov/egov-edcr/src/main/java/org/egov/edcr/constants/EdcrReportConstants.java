@@ -374,6 +374,7 @@ public class EdcrReportConstants {
     public static final String SUBRULE_41_III_AREA_DESC = "Total area of %s";
     public static final String SUBRULE_41_III_TOTAL_WIDTH = "Minimum Width of %s";
     public static final BigDecimal MINIMUM_AREA_4_5 = BigDecimal.valueOf(4.5);
+    public static final BigDecimal CARPETAREA_THRESHHOLD = BigDecimal.valueOf(66);
     public static final BigDecimal MINIMUM_AREA_5 = BigDecimal.valueOf(5);
     public static final BigDecimal MINIMUM_WIDTH_1_8 = BigDecimal.valueOf(1.8);
     public static final String KITCHEN = "kitchen";

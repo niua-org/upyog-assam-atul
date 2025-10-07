@@ -82,6 +82,14 @@ public class FloorUnit extends Measurement {
 		return doors;
 	}
 
+	public List<Occupancy> getOccupancies() {
+		return occupancies;
+	}
+
+	public void setOccupancies(List<Occupancy> occupancies) {
+		this.occupancies = occupancies;
+	}
+
 	public MeasurementWithHeight getVerandah() {
 		return verandah;
 	}

@@ -55,18 +55,14 @@ import static org.egov.edcr.constants.CommonFeatureConstants.OF_CARPET_AREA;
 import static org.egov.edcr.constants.CommonFeatureConstants.TH_OF_FLOOR_AREA;
 import static org.egov.edcr.constants.CommonFeatureConstants.VENTILATION_AREA;
 import static org.egov.edcr.constants.EdcrReportConstants.AREA_UNIT_SQM;
-import static org.egov.edcr.constants.EdcrReportConstants.COMMON_ROOM_VENTILATION_DEFINED_PERCENT_MSG;
 import static org.egov.edcr.constants.EdcrReportConstants.COMMON_ROOM_VENTILATION_OPENING_DESC_PREFIX;
-import static org.egov.edcr.constants.EdcrReportConstants.LAUNDRY_VENTILATION_DESC;
+import static org.egov.edcr.constants.EdcrReportConstants.LAUNDRY_VENTILATION_OPENING_DESC_PREFIX;
 import static org.egov.edcr.constants.EdcrReportConstants.LIGHT_VENTILATION_DESCRIPTION;
 import static org.egov.edcr.constants.EdcrReportConstants.PARENTHESIS_END;
 import static org.egov.edcr.constants.EdcrReportConstants.PARENTHESIS_START;
 import static org.egov.edcr.constants.EdcrReportConstants.PERCENTAGE_SUFFIX;
 import static org.egov.edcr.constants.EdcrReportConstants.RULE_43;
 import static org.egov.edcr.constants.EdcrReportConstants.RULE_VENT_01;
-import static org.egov.edcr.constants.EdcrReportConstants.VENTILATION_DEFINED_PERCENT_MSG;
-import static org.egov.edcr.constants.EdcrReportConstants.VENTILATION_NOT_PROVIDED_AT_FLOOR;
-import static org.egov.edcr.constants.EdcrReportConstants.LAUNDRY_VENTILATION_OPENING_DESC_PREFIX;
 import static org.egov.edcr.service.FeatureUtil.addScrutinyDetailtoPlan;
 import static org.egov.edcr.service.FeatureUtil.mapReportDetails;
 
@@ -82,6 +78,7 @@ import org.apache.logging.log4j.Logger;
 import org.egov.common.entity.edcr.Block;
 import org.egov.common.entity.edcr.FeatureEnum;
 import org.egov.common.entity.edcr.Floor;
+import org.egov.common.entity.edcr.FloorUnit;
 import org.egov.common.entity.edcr.Measurement;
 import org.egov.common.entity.edcr.MeasurementWithHeight;
 import org.egov.common.entity.edcr.Occupancy;
@@ -131,13 +128,14 @@ public class Ventilation_Assam extends Ventilation {
 
 	        if (b.getBuilding() != null && b.getBuilding().getFloors() != null) {
 	            for (Floor f : b.getBuilding().getFloors()) {
-	                processGeneralVentilation(f, ventilationValues[0], generalScrutiny, pl);
+	            	 for (FloorUnit unit : f.getUnits()) {
+	                processGeneralVentilation(f, unit, ventilationValues[0], generalScrutiny, pl);
 	                processLaundryRecreationVentilation(f, bathScrutiny, pl);
 	                processCommonRoomVentilation(f, bathScrutiny, pl);
 	              
 	            }
 	        }
-	        
+	        } 
 	        pl.getReportOutput().getScrutinyDetails().add(generalScrutiny);
 	        pl.getReportOutput().getScrutinyDetails().add(bathScrutiny);
 	    }
@@ -197,7 +195,7 @@ public class Ventilation_Assam extends Ventilation {
 	 * @param scrutinyDetail The scrutiny detail object to add results to
 	 * @param pl The building plan for adding scrutiny details to report
 	 */
-	private void processGeneralVentilation(Floor floor, BigDecimal ventilationRatio,
+	private void processGeneralVentilation(Floor floor, FloorUnit unit, BigDecimal ventilationRatio,
 	                                       ScrutinyDetail scrutinyDetail, Plan pl) {
 	    if (floor.getLightAndVentilation() != null &&
 	        floor.getLightAndVentilation().getMeasurements() != null &&
@@ -206,8 +204,11 @@ public class Ventilation_Assam extends Ventilation {
 	        BigDecimal totalVentilationArea = floor.getLightAndVentilation().getMeasurements().stream()
 	            .map(Measurement::getArea).reduce(BigDecimal.ZERO, BigDecimal::add);
 
-	        BigDecimal totalCarpetArea = floor.getOccupancies().stream()
-	            .map(Occupancy::getCarpetArea).reduce(BigDecimal.ZERO, BigDecimal::add);
+//	        BigDecimal totalCarpetArea = floor.getOccupancies().stream()
+//	            .map(Occupancy::getCarpetArea).reduce(BigDecimal.ZERO, BigDecimal::add);
+	        
+	        BigDecimal totalCarpetArea = unit.getOccupancies().stream()
+		            .map(Occupancy::getCarpetArea).reduce(BigDecimal.ZERO, BigDecimal::add);
 
 	        if (totalVentilationArea.compareTo(BigDecimal.ZERO) > 0) {
 	            BigDecimal requiredVentilation = totalCarpetArea.divide(ventilationRatio, 2, BigDecimal.ROUND_HALF_UP);

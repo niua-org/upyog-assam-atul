@@ -105,9 +105,10 @@ public class Ventilation extends FeatureProcess {
 
 	        if (b.getBuilding() != null && b.getBuilding().getFloors() != null) {
 	            for (Floor f : b.getBuilding().getFloors()) {
-	                processGeneralVentilation(f, ventilationValues[0], generalScrutiny, pl);
+	            	 for (FloorUnit unit : f.getUnits()) {
+	                processGeneralVentilation(f, unit, ventilationValues[0], generalScrutiny, pl);
 	                // processBathroomVentilation(f, ventilationValues[1], bathScrutiny, pl); // Uncomment if needed
-	            }
+	            }}
 	        }
 	    }
 	    return pl;
@@ -166,7 +167,7 @@ public class Ventilation extends FeatureProcess {
 	 * @param scrutinyDetail The scrutiny detail object to add results to
 	 * @param pl The building plan for adding scrutiny details to report
 	 */
-	private void processGeneralVentilation(Floor floor, BigDecimal ventilationRatio,
+	private void processGeneralVentilation(Floor floor, FloorUnit unit, BigDecimal ventilationRatio,
 	                                       ScrutinyDetail scrutinyDetail, Plan pl) {
 	    if (floor.getLightAndVentilation() != null &&
 	        floor.getLightAndVentilation().getMeasurements() != null &&
@@ -175,8 +176,11 @@ public class Ventilation extends FeatureProcess {
 	        BigDecimal totalVentilationArea = floor.getLightAndVentilation().getMeasurements().stream()
 	            .map(Measurement::getArea).reduce(BigDecimal.ZERO, BigDecimal::add);
 
-	        BigDecimal totalCarpetArea = floor.getOccupancies().stream()
-	            .map(Occupancy::getCarpetArea).reduce(BigDecimal.ZERO, BigDecimal::add);
+//	        BigDecimal totalCarpetArea = floor.getOccupancies().stream()
+//	            .map(Occupancy::getCarpetArea).reduce(BigDecimal.ZERO, BigDecimal::add);
+	        
+	        BigDecimal totalCarpetArea = unit.getOccupancies().stream()
+		            .map(Occupancy::getCarpetArea).reduce(BigDecimal.ZERO, BigDecimal::add);
 
 	        if (totalVentilationArea.compareTo(BigDecimal.ZERO) > 0) {
 	            BigDecimal requiredVentilation = totalCarpetArea.divide(ventilationRatio, 2, BigDecimal.ROUND_HALF_UP);
