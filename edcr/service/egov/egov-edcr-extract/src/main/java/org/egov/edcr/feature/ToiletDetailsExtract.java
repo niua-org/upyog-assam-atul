@@ -31,74 +31,49 @@ public class ToiletDetailsExtract extends FeatureExtract {
         return planDetail;
     }
 
+    /**
+     * Extracts toilets and ventilation details for all units in the given PlanDetail.
+     * Iterates through blocks, floors, and units to perform extraction.
+     *
+     * @param planDetail the PlanDetail object containing building data
+     * @return the updated PlanDetail object with extracted toilet and ventilation information
+     */
     @Override
     public PlanDetail extract(PlanDetail planDetail) {
+        LOG.debug("Starting extraction for PlanDetail with [{}] blocks", 
+                  planDetail.getBlocks() != null ? planDetail.getBlocks().size() : 0);
+
         for (Block block : planDetail.getBlocks()) {
             if (block.getBuilding() != null && block.getBuilding().getFloors() != null) {
+                LOG.debug("Processing Block [{}] with [{}] floors", 
+                          block.getNumber(), block.getBuilding().getFloors().size());
+
                 for (Floor floor : block.getBuilding().getFloors()) {
-                	for (FloorUnit unit : floor.getUnits()) {
-                    List<Toilet> toilets = extractToilets(planDetail, block, floor, unit);
-                    extractVentilation(planDetail, block, floor, unit, toilets);
-                    unit.setToilet(toilets);
+                    LOG.debug("Processing Floor [{}] with [{}] units", 
+                              floor.getNumber(), floor.getUnits() != null ? floor.getUnits().size() : 0);
+
+                    for (FloorUnit unit : floor.getUnits()) {
+                        LOG.debug("Processing FloorUnit [{}] in Floor [{}], Block [{}]", 
+                                  unit.getUnitNumber(), floor.getNumber(), block.getNumber());
+
+                        List<Toilet> toilets = extractToilets(planDetail, block, floor, unit);
+                        LOG.debug("Extracted [{}] toilets for Unit [{}]", toilets.size(), unit.getUnitNumber());
+
+                        extractVentilation(planDetail, block, floor, unit, toilets);
+                        LOG.debug("Ventilation extraction completed for Unit [{}]", unit.getUnitNumber());
+
+                        unit.setToilet(toilets);
+                        LOG.debug("Set toilets for Unit [{}]", unit.getUnitNumber());
+                    }
                 }
             }
         }
-       }
+
+        LOG.debug("Completed extraction for PlanDetail");
         return planDetail;
     }
-    
-	/*
-	 * public PlanDetail extract(PlanDetail planDetail) { for (Block block :
-	 * planDetail.getBlocks()) { if (block.getBuilding() != null &&
-	 * block.getBuilding().getFloors() != null) { for (Floor f :
-	 * block.getBuilding().getFloors()) { List<Toilet> toilets = new ArrayList<>();
-	 * String layerName =
-	 * String.format(layerNames.getLayerName("LAYER_NAME_BLK_FLR_TOILET"),
-	 * block.getNumber(), f.getNumber(), "+\\d");
-	 * 
-	 * List<String> names = Util.getLayerNamesLike(planDetail.getDoc(), layerName);
-	 * 
-	 * for (String toiletLayer : names) { List<DXFLWPolyline> toiletMeasurements =
-	 * Util.getPolyLinesByLayer(planDetail.getDoc(), toiletLayer);
-	 * 
-	 * if (!toiletMeasurements.isEmpty()) { Toilet toiletObj = new Toilet();
-	 * List<Measurement> toiletMeasurementList = new ArrayList<>();
-	 * toiletMeasurements.forEach(toilet -> { Measurement measurementToilet = new
-	 * MeasurementDetail(toilet, true);
-	 * toiletMeasurementList.add(measurementToilet); });
-	 * 
-	 * toiletObj.setToilets(toiletMeasurementList); toilets.add(toiletObj); }
-	 * 
-	 * 
-	 * }
-	 * 
-	 * String toiletVentilationLayer = String.format(
-	 * layerNames.getLayerName("LAYER_NAME_BLK_FLR_TOILET_VENTILATION"),
-	 * block.getNumber(), f.getNumber(), "+\\d");
-	 * 
-	 * List<String> ventilationList = Util.getLayerNamesLike(planDetail.getDoc(),
-	 * toiletVentilationLayer);
-	 * 
-	 * int index = 0; for (String ventilationHeightLayer : ventilationList) { // get
-	 * height from layer String windowHeightStr =
-	 * Util.getMtextByLayerName(planDetail.getDoc(), ventilationHeightLayer);
-	 * BigDecimal windowHeight = windowHeightStr != null ? new
-	 * BigDecimal(windowHeightStr.replaceAll("WINDOW_HT_M=", "")) : BigDecimal.ZERO;
-	 * 
-	 * // get widths from that same layer List<BigDecimal> windowWidths =
-	 * Util.getListOfDimensionByColourCode(planDetail, ventilationHeightLayer,
-	 * DxfFileConstants.INDEX_COLOR_TWO);
-	 * 
-	 * if (index < toilets.size()) { Toilet toiletObj = toilets.get(index);
-	 * toiletObj.setToiletVentilation(windowHeight); if (!windowWidths.isEmpty()) {
-	 * toiletObj.setToiletWindowWidth(windowWidths); } }
-	 * 
-	 * index++; }
-	 * 
-	 * f.setToilet(toilets); } } }
-	 * 
-	 * return planDetail; }
-	 */
+
+  
     /**
      * Extracts toilet measurement details from CAD layers.
      *
@@ -108,14 +83,23 @@ public class ToiletDetailsExtract extends FeatureExtract {
      * @return list of toilets found on this floor
      */
     private List<Toilet> extractToilets(PlanDetail planDetail, Block block, Floor floor, FloorUnit unit) {
+        LOG.debug("Starting toilet extraction for Unit [{}] in Floor [{}], Block [{}]",
+                  unit.getUnitNumber(), floor.getNumber(), block.getNumber());
+
         List<Toilet> toilets = new ArrayList<>();
         String layerName = String.format(layerNames.getLayerName("LAYER_NAME_BLK_FLR_UNIT_TOILET"),
-                block.getNumber(), floor.getNumber(), unit.getUnitNumber(), "+\\d");
+                                         block.getNumber(), floor.getNumber(), unit.getUnitNumber(), "+\\d");
+
+        LOG.debug("Constructed toilet layer pattern: {}", layerName);
 
         List<String> names = Util.getLayerNamesLike(planDetail.getDoc(), layerName);
+        LOG.debug("Found [{}] toilet layers for Unit [{}]", names.size(), unit.getUnitNumber());
 
         for (String toiletLayer : names) {
+            LOG.debug("Processing toilet layer: {}", toiletLayer);
+
             List<DXFLWPolyline> toiletMeasurements = Util.getPolyLinesByLayer(planDetail.getDoc(), toiletLayer);
+            LOG.debug("Found [{}] measurements in layer [{}]", toiletMeasurements.size(), toiletLayer);
 
             if (!toiletMeasurements.isEmpty()) {
                 Toilet toiletObj = new Toilet();
@@ -127,8 +111,15 @@ public class ToiletDetailsExtract extends FeatureExtract {
 
                 toiletObj.setToilets(toiletMeasurementList);
                 toilets.add(toiletObj);
+
+                LOG.debug("Added Toilet object with [{}] measurements for layer [{}]",
+                          toiletMeasurementList.size(), toiletLayer);
             }
         }
+
+        LOG.debug("Completed toilet extraction for Unit [{}]. Total toilets extracted: [{}]",
+                  unit.getUnitNumber(), toilets.size());
+
         return toilets;
     }
     
@@ -140,24 +131,36 @@ public class ToiletDetailsExtract extends FeatureExtract {
      * @param floor      the floor being processed
      * @param toilets    the list of toilets on this floor
      */
-    private void extractVentilation(PlanDetail planDetail, Block block, Floor floor, FloorUnit unit,List<Toilet> toilets) {
+    private void extractVentilation(PlanDetail planDetail, Block block, Floor floor, FloorUnit unit, List<Toilet> toilets) {
+        LOG.debug("Starting ventilation extraction for Unit [{}] in Floor [{}], Block [{}]",
+                  unit.getUnitNumber(), floor.getNumber(), block.getNumber());
+
         String toiletVentilationLayer = String.format(
                 layerNames.getLayerName("LAYER_NAME_BLK_FLR_UNIT_TOILET_VENTILATION"),
                 block.getNumber(), floor.getNumber(), unit.getUnitNumber(), "+\\d");
 
+        LOG.debug("Constructed toilet ventilation layer pattern: {}", toiletVentilationLayer);
+
         List<String> ventilationList = Util.getLayerNamesLike(planDetail.getDoc(), toiletVentilationLayer);
+        LOG.debug("Found [{}] ventilation layers for Unit [{}]", ventilationList.size(), unit.getUnitNumber());
 
         int index = 0;
         for (String ventilationHeightLayer : ventilationList) {
+            LOG.debug("Processing ventilation layer: {}", ventilationHeightLayer);
+
             // get height from layer
             String windowHeightStr = Util.getMtextByLayerName(planDetail.getDoc(), ventilationHeightLayer);
             BigDecimal windowHeight = windowHeightStr != null
                     ? new BigDecimal(windowHeightStr.replaceAll("WINDOW_HT_M=", ""))
                     : BigDecimal.ZERO;
 
+            LOG.debug("Extracted ventilation height: {} for layer {}", windowHeight, ventilationHeightLayer);
+
             // get widths from that same layer
             List<BigDecimal> windowWidths =
                     Util.getListOfDimensionByColourCode(planDetail, ventilationHeightLayer, DxfFileConstants.INDEX_COLOR_TWO);
+
+            LOG.debug("Extracted [{}] ventilation widths for layer {}", windowWidths.size(), ventilationHeightLayer);
 
             if (index < toilets.size()) {
                 Toilet toiletObj = toilets.get(index);
@@ -165,9 +168,15 @@ public class ToiletDetailsExtract extends FeatureExtract {
                 if (!windowWidths.isEmpty()) {
                     toiletObj.setToiletWindowWidth(windowWidths);
                 }
+                LOG.debug("Updated Toilet object [{}] with ventilation height and widths", index);
+            } else {
+                LOG.warn("More ventilation layers [{}] than toilets [{}] for Unit [{}]",
+                         ventilationList.size(), toilets.size(), unit.getUnitNumber());
             }
 
             index++;
         }
+
+        LOG.debug("Completed ventilation extraction for Unit [{}]", unit.getUnitNumber());
     }
 }

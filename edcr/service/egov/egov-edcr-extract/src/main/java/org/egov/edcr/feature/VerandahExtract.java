@@ -26,20 +26,39 @@ public class VerandahExtract extends FeatureExtract {
 	@Autowired
 	private LayerNames layerNames;
 
+	/**
+	 * Extracts verandah details for all units in all floors of all blocks in the given PlanDetail.
+	 *
+	 * @param pl the PlanDetail containing blocks, floors, and units
+	 * @return the same PlanDetail with verandah details extracted for each unit
+	 */
 	@Override
 	public PlanDetail extract(PlanDetail pl) {
+	    LOG.debug("Starting verandah extraction for PlanDetail with [{}] blocks", pl.getBlocks().size());
+
 	    for (Block b : pl.getBlocks()) {
 	        if (b.getBuilding() != null && b.getBuilding().getFloors() != null
 	                && !b.getBuilding().getFloors().isEmpty()) {
+	            LOG.debug("Processing Block [{}] with [{}] floors", b.getNumber(), b.getBuilding().getFloors().size());
+
 	            for (Floor f : b.getBuilding().getFloors()) {
-	            	for (FloorUnit unit : f.getUnits()) {
-	                extractVerandah(pl, b, f, unit);
+	                LOG.debug("Processing Floor [{}] in Block [{}]", f.getNumber(), b.getNumber());
+
+	                for (FloorUnit unit : f.getUnits()) {
+	                    LOG.debug("Extracting verandah for Unit [{}] in Floor [{}], Block [{}]",
+	                              unit.getUnitNumber(), f.getNumber(), b.getNumber());
+	                    extractVerandah(pl, b, f, unit);
+	                }
 	            }
+	        } else {
+	            LOG.debug("Skipping Block [{}] as it has no floors or building information", b.getNumber());
 	        }
 	    }
-	  }      
+
+	    LOG.debug("Completed verandah extraction for PlanDetail");
 	    return pl;
 	}
+
 	
 	
 	/**
@@ -54,7 +73,11 @@ public class VerandahExtract extends FeatureExtract {
 	            layerNames.getLayerName("LAYER_NAME_UNIT_VERANDAH"),
 	            b.getNumber(), f.getNumber(), unit.getUnitNumber());
 
+	    LOG.debug("Extracting verandah for Unit [{}] in Floor [{}], Block [{}] from layer [{}]",
+	            unit.getUnitNumber(), f.getNumber(), b.getNumber(), verandahLayer);
+
 	    List<DXFLWPolyline> verandahs = Util.getPolyLinesByLayer(pl.getDoc(), verandahLayer);
+	    LOG.debug("Found [{}] verandah polylines for Unit [{}]", verandahs.size(), unit.getUnitNumber());
 
 	    if (!verandahs.isEmpty()) {
 	        // Extract measurements
@@ -62,57 +85,26 @@ public class VerandahExtract extends FeatureExtract {
 	                .map(polyline -> new MeasurementDetail(polyline, true))
 	                .collect(Collectors.toList());
 	        unit.getVerandah().setMeasurements(verandahMeasurements);
+	        LOG.debug("Added [{}] verandah measurements for Unit [{}]", verandahMeasurements.size(), unit.getUnitNumber());
 
 	        // Verandah Height from dimension
 	        List<BigDecimal> verandahHeight = Util.getListOfDimensionByColourCode(
 	                pl, verandahLayer, DxfFileConstants.INDEX_COLOR_ONE);
+	        LOG.debug("Extracted [{}] verandah height values for Unit [{}]", verandahHeight.size(), unit.getUnitNumber());
 
 	        // Verandah Width from dimension
 	        List<BigDecimal> verandahWidth = Util.getListOfDimensionByColourCode(
 	                pl, verandahLayer, DxfFileConstants.INDEX_COLOR_TWO);
+	        LOG.debug("Extracted [{}] verandah width values for Unit [{}]", verandahWidth.size(), unit.getUnitNumber());
 
 	        unit.getVerandah().setHeightOrDepth(verandahHeight);
 	        unit.getVerandah().setVerandahWidth(verandahWidth);
+	    } else {
+	        LOG.debug("No verandah polylines found for Unit [{}] in Floor [{}], Block [{}]",
+	                unit.getUnitNumber(), f.getNumber(), b.getNumber());
 	    }
 	}
-	/*
-	 * public PlanDetail extract(PlanDetail pl) { for (Block b : pl.getBlocks()) {
-	 * if (b.getBuilding() != null && b.getBuilding().getFloors() != null &&
-	 * !b.getBuilding().getFloors().isEmpty()) { for (Floor f :
-	 * b.getBuilding().getFloors()) {
-	 * 
-	 * List<DXFLWPolyline> verandahs = Util.getPolyLinesByLayer(pl.getDoc(),
-	 * String.format(layerNames.getLayerName("LAYER_NAME_VERANDAH"),b.getNumber(),
-	 * f.getNumber())); if (!verandahs.isEmpty()) { List<Measurement>
-	 * verandahMeasurements = verandahs.stream() .map(polyline -> new
-	 * MeasurementDetail(polyline, true)).collect(Collectors.toList());
-	 * f.getVerandah().setMeasurements(verandahMeasurements);
-	 * 
-	 * // f.getVerandah() //
-	 * .setHeightOrDepth((Util.getListOfDimensionValueByLayer(pl, //
-	 * String.format(layerNames.getLayerName("LAYER_NAME_VERANDAH"), //
-	 * b.getNumber(), f.getNumber()))));
-	 * 
-	 * String verandahLayer =
-	 * String.format(layerNames.getLayerName("LAYER_NAME_VERANDAH"), b.getNumber(),
-	 * f.getNumber()); // Verandah Height from dimension List<BigDecimal>
-	 * verandahHeight = Util.getListOfDimensionByColourCode(pl, verandahLayer,
-	 * DxfFileConstants.INDEX_COLOR_ONE);
-	 * 
-	 * // Verandah Width from dimension List<BigDecimal> verandahWidth =
-	 * Util.getListOfDimensionByColourCode(pl, verandahLayer,
-	 * DxfFileConstants.INDEX_COLOR_TWO);
-	 * 
-	 * f.getVerandah().setHeightOrDepth(verandahHeight);
-	 * f.getVerandah().setVerandahWidth(verandahWidth);
-	 * 
-	 * }
-	 * 
-	 * } } }
-	 * 
-	 * return pl; }
-	 */
-
+	
 	@Override
 	public PlanDetail validate(PlanDetail pl) {
 		return pl;

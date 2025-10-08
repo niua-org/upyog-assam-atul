@@ -64,8 +64,6 @@ public class HeightOfRoomExtract extends FeatureExtract {
                                             continue outside;
                                         }
 
-                       
-                     
                         for (FloorUnit unit : floor.getUnits()) {
                         	
                             extractAcRoomsForUnit(pl, block, floor, unit, layerNames, roomOccupancyTypes, roomOccupancyFeature);
@@ -86,60 +84,7 @@ public class HeightOfRoomExtract extends FeatureExtract {
                             
                             extractWindowsForUnitLevel(pl, block, floor, unit, layerNames);
 
-
-
                         }
-
-					
-						
-						/*// Code Added by Neha for windows extract
-
-						String windowLayerName = String.format(layerNames.getLayerName("LAYER_NAME_WINDOW"),
-								block.getNumber(), floor.getNumber(), "+\\d");
-
-						List<String> windowLayers = Util.getLayerNamesLike(pl.getDoc(), windowLayerName);
-
-						if (!windowLayers.isEmpty()) {
-
-							for (String windowLayer : windowLayers) {
-								String windowHeight = Util.getMtextByLayerName(pl.getDoc(), windowLayer);
-
-//                            	List<DXFLWPolyline> doorPolyLines = Util.getPolyLinesByLayer(pl.getDoc(),
-//                            			doorLayer);
-
-//                            	BigDecimal doorWidth=BigDecimal.ZERO;
-
-								List<DXFDimension> dimensionList = Util.getDimensionsByLayer(pl.getDoc(), windowLayer);
-								if (dimensionList != null && !dimensionList.isEmpty()) {
-									Window window = new Window();
-									BigDecimal windowHeight1 = windowHeight != null
-											? BigDecimal.valueOf(
-													Double.valueOf(windowHeight.replaceAll("WINDOW_HT_M=", "")))
-											: BigDecimal.ZERO;
-									window.setWindowHeight(windowHeight1);
-									for (Object dxfEntity : dimensionList) {
-										DXFDimension dimension = (DXFDimension) dxfEntity;
-										List<BigDecimal> values = new ArrayList<>();
-										Util.extractDimensionValue(pl, values, dimension, windowLayer);
-
-										if (!values.isEmpty()) {
-											for (BigDecimal minDis : values) {
-//                                            	doorWidth=minDis;
-												window.setWindowWidth(minDis);
-											}
-										} else {
-											window.setWindowWidth(BigDecimal.ZERO);
-										}
-									}
-									floor.addWindow(window);
-								}
-//								else {
-//									window.setWindowWidth(BigDecimal.ZERO);
-//								}
-
-							}
-						}
-					//}*/
                     }
                     
         if (LOG.isDebugEnabled())
@@ -174,81 +119,107 @@ public class HeightOfRoomExtract extends FeatureExtract {
      * @param roomOccupancyFeature a map of occupancy type names to color codes used in the CAD drawing
      */
     
-	private void extractAcRoomsForUnit(PlanDetail pl, Block block, Floor floor, FloorUnit unit, LayerNames layerNames,
-			Set<String> roomOccupancyTypes, Map<String, Integer> roomOccupancyFeature) {
+    private void extractAcRoomsForUnit(PlanDetail pl, Block block, Floor floor, FloorUnit unit, LayerNames layerNames,
+            Set<String> roomOccupancyTypes, Map<String, Integer> roomOccupancyFeature) {
 
-		Map<Integer, List<BigDecimal>> acRoomHeightMaps = new HashMap<>();
+        LOG.debug("---- Starting extractAcRoomsForUnit for Block [{}], Floor [{}], Unit [{}] ----",
+                block.getNumber(), floor.getNumber(), unit.getUnitNumber());
 
-		String acRoomLayerNames = String.format(layerNames.getLayerName("LAYER_NAME_UNIT_AC_ROOM"), block.getNumber(),
-				floor.getNumber(), unit.getUnitNumber(), "+\\d");
+        Map<Integer, List<BigDecimal>> acRoomHeightMaps = new HashMap<>();
 
-		List<String> acRoomLayerss = Util.getLayerNamesLike(pl.getDoc(), acRoomLayerNames);
+        String acRoomLayerNames = String.format(layerNames.getLayerName("LAYER_NAME_UNIT_AC_ROOM"),
+                block.getNumber(), floor.getNumber(), unit.getUnitNumber(), "+\\d");
 
-		if (acRoomLayerss.isEmpty()) {
-			return;
-		}
+        LOG.debug("Generated AC Room layer name pattern: {}", acRoomLayerNames);
 
-		for (String acRoomLayer : acRoomLayerss) {
+        List<String> acRoomLayerss = Util.getLayerNamesLike(pl.getDoc(), acRoomLayerNames);
 
-			// Collect heights by occupancy type
-			for (String type : roomOccupancyTypes) {
-				Integer colorCode = roomOccupancyFeature.get(type);
-				List<BigDecimal> acRoomHeights = Util.getListOfDimensionByColourCode(pl, acRoomLayer, colorCode);
-				if (!acRoomHeights.isEmpty()) {
-					acRoomHeightMaps.put(colorCode, acRoomHeights);
-				}
-			}
+        if (acRoomLayerss.isEmpty()) {
+            LOG.debug("No AC Room layers found for Unit [{}]", unit.getUnitNumber());
+            return;
+        }
 
-			List<DXFLWPolyline> acRoomPolyLines = Util.getPolyLinesByLayer(pl.getDoc(), acRoomLayer);
+        LOG.debug("Found {} AC Room layers for Unit [{}]: {}", acRoomLayerss.size(), unit.getUnitNumber(), acRoomLayerss);
 
-			if (!acRoomHeightMaps.isEmpty() || !acRoomPolyLines.isEmpty()) {
-				boolean isClosed = acRoomPolyLines.stream().allMatch(DXFLWPolyline::isClosed);
+        for (String acRoomLayer : acRoomLayerss) {
+            LOG.debug("Processing AC Room layer: {}", acRoomLayer);
 
-				Room acRoom = new Room();
-				String[] roomNo = acRoomLayer.split("_");
-				if (roomNo != null && roomNo.length == 9) {
-					acRoom.setNumber(roomNo[8]);
-				}
-				acRoom.setClosed(isClosed);
+            // Collect heights by occupancy type
+            for (String type : roomOccupancyTypes) {
+                Integer colorCode = roomOccupancyFeature.get(type);
+                List<BigDecimal> acRoomHeights = Util.getListOfDimensionByColourCode(pl, acRoomLayer, colorCode);
+                if (!acRoomHeights.isEmpty()) {
+                    acRoomHeightMaps.put(colorCode, acRoomHeights);
+                    LOG.debug("Added AC Room heights for color [{}]: {}", colorCode, acRoomHeights);
+                }
+            }
 
-				List<RoomHeight> acRoomHeightsList = new ArrayList<>();
-				if (!acRoomPolyLines.isEmpty()) {
-					List<Measurement> acRooms = new ArrayList<>();
-					acRoomPolyLines.forEach(arp -> {
-						Measurement m = new MeasurementDetail(arp, true);
-						if (!acRoomHeightMaps.isEmpty() && acRoomHeightMaps.containsKey(m.getColorCode())) {
-							for (BigDecimal value : acRoomHeightMaps.get(m.getColorCode())) {
-								RoomHeight roomHeight = new RoomHeight();
-								roomHeight.setColorCode(m.getColorCode());
-								roomHeight.setHeight(value);
-								acRoomHeightsList.add(roomHeight);
-							}
-							acRoom.setHeights(acRoomHeightsList);
-						}
-						acRooms.add(m);
-					});
+            List<DXFLWPolyline> acRoomPolyLines = Util.getPolyLinesByLayer(pl.getDoc(), acRoomLayer);
+            LOG.debug("Found {} polyline(s) in AC Room layer [{}]", acRoomPolyLines.size(), acRoomLayer);
 
-					// Extract mezzanine area (if declared at AC room level)
-					String acRoomMezzLayerRegExp = String.format(
-							layerNames.getLayerName("LAYER_NAME_UNIT_MEZZANINE_AT_ACROOM"), block.getNumber(),
-							floor.getNumber(), acRoom.getNumber(), "+\\d");
+            if (!acRoomHeightMaps.isEmpty() || !acRoomPolyLines.isEmpty()) {
+                boolean isClosed = acRoomPolyLines.stream().allMatch(DXFLWPolyline::isClosed);
+                LOG.debug("All polylines closed: {}", isClosed);
 
-					List<String> acRoomMezzLayers = Util.getLayerNamesLike(pl.getDoc(), acRoomMezzLayerRegExp);
+                Room acRoom = new Room();
+                String[] roomNo = acRoomLayer.split("_");
+                if (roomNo != null && roomNo.length == 9) {
+                    acRoom.setNumber(roomNo[8]);
+                    LOG.debug("Extracted AC Room number: {}", acRoom.getNumber());
+                }
+                acRoom.setClosed(isClosed);
 
-					if (!acRoomMezzLayers.isEmpty()) {
-					    for (String layerName : acRoomMezzLayers) {
-					        List<Occupancy> roomMezzanines = extractMezzanineAreas(pl, layerName);
-					        acRoom.setMezzanineAreas(roomMezzanines);
-					    }
-					}
+                List<RoomHeight> acRoomHeightsList = new ArrayList<>();
+                if (!acRoomPolyLines.isEmpty()) {
+                    List<Measurement> acRooms = new ArrayList<>();
+                    acRoomPolyLines.forEach(arp -> {
+                        Measurement m = new MeasurementDetail(arp, true);
+                        if (!acRoomHeightMaps.isEmpty() && acRoomHeightMaps.containsKey(m.getColorCode())) {
+                            for (BigDecimal value : acRoomHeightMaps.get(m.getColorCode())) {
+                                RoomHeight roomHeight = new RoomHeight();
+                                roomHeight.setColorCode(m.getColorCode());
+                                roomHeight.setHeight(value);
+                                acRoomHeightsList.add(roomHeight);
+                            }
+                            acRoom.setHeights(acRoomHeightsList);
+                        }
+                        acRooms.add(m);
+                    });
 
+                    // Extract mezzanine area (if declared at AC room level)
+                    String acRoomMezzLayerRegExp = String.format(
+                            layerNames.getLayerName("LAYER_NAME_UNIT_MEZZANINE_AT_ACROOM"),
+                            block.getNumber(), floor.getNumber(), acRoom.getNumber(), "+\\d");
 
-					acRoom.setRooms(acRooms);
-				}
-				unit.addAcRoom(acRoom);
-			}
-		}
-	}
+                    LOG.debug("Checking mezzanine layers using pattern: {}", acRoomMezzLayerRegExp);
+
+                    List<String> acRoomMezzLayers = Util.getLayerNamesLike(pl.getDoc(), acRoomMezzLayerRegExp);
+                    LOG.debug("Found {} mezzanine layer(s) for AC Room [{}]: {}",
+                            acRoomMezzLayers.size(), acRoom.getNumber(), acRoomMezzLayers);
+
+                    if (!acRoomMezzLayers.isEmpty()) {
+                        for (String layerName : acRoomMezzLayers) {
+                            List<Occupancy> roomMezzanines = extractMezzanineAreas(pl, layerName);
+                            acRoom.setMezzanineAreas(roomMezzanines);
+                            LOG.debug("Extracted {} mezzanine areas from layer [{}]",
+                                    roomMezzanines.size(), layerName);
+                        }
+                    }
+
+                    acRoom.setRooms(acRooms);
+                    LOG.debug("Added {} AC Room measurement(s) for Room [{}]",
+                            acRooms.size(), acRoom.getNumber());
+                }
+
+                unit.addAcRoom(acRoom);
+                LOG.debug("AC Room [{}] added to Unit [{}]", acRoom.getNumber(), unit.getUnitNumber());
+            }
+        }
+
+        LOG.debug("---- Completed extractAcRoomsForUnit for Block [{}], Floor [{}], Unit [{}] ----",
+                block.getNumber(), floor.getNumber(), unit.getUnitNumber());
+    }
+
 	
 	/**
 	 * Extracts regular rooms for a given floor unit in a building plan.
@@ -277,90 +248,116 @@ public class HeightOfRoomExtract extends FeatureExtract {
 	 * @param roomOccupancyTypes  a set of occupancy type names relevant for height extraction
 	 * @param layerNames          the {@link LayerNames} object containing CAD layer naming conventions
 	 */
-	
-	private void extractRegularRoomsForUnit(PlanDetail pl, Block block, Floor floor, FloorUnit unit,
-			Map<String, Integer> roomOccupancyFeature, Set<String> roomOccupancyTypes, LayerNames layerNames) {
+    
+    private void extractRegularRoomsForUnit(PlanDetail pl, Block block, Floor floor, FloorUnit unit,
+            Map<String, Integer> roomOccupancyFeature, Set<String> roomOccupancyTypes, LayerNames layerNames) {
 
-		Map<Integer, List<BigDecimal>> roomHeightMaps = new HashMap<>();
+        Map<Integer, List<BigDecimal>> roomHeightMaps = new HashMap<>();
 
-		String regularRoomLayerNames = String.format(layerNames.getLayerName("LAYER_NAME_UNITWISE_REGULAR_ROOM"),
-				block.getNumber(), floor.getNumber(), unit.getUnitNumber(), "+\\d");
+        String regularRoomLayerNames = String.format(
+                layerNames.getLayerName("LAYER_NAME_UNITWISE_REGULAR_ROOM"),
+                block.getNumber(), floor.getNumber(), unit.getUnitNumber(), "+\\d");
 
-		List<String> regularRoomLayerss = Util.getLayerNamesLike(pl.getDoc(), regularRoomLayerNames);
+        LOG.debug("Extracting Regular Rooms for Unit [{}] on Floor [{}] in Block [{}] using layer pattern [{}]",
+                unit.getUnitNumber(), floor.getNumber(), block.getNumber(), regularRoomLayerNames);
 
-		if (!regularRoomLayerss.isEmpty()) {
-			for (String regularRoomLayer : regularRoomLayerss) {
+        List<String> regularRoomLayerss = Util.getLayerNamesLike(pl.getDoc(), regularRoomLayerNames);
 
-				for (String type : roomOccupancyTypes) {
-					Integer colorCode = roomOccupancyFeature.get(type);
-					List<BigDecimal> regularRoomHeights = Util.getListOfDimensionByColourCode(pl, regularRoomLayer,
-							colorCode);
-					if (!regularRoomHeights.isEmpty()) {
-						roomHeightMaps.put(colorCode, regularRoomHeights);
-					}
-				}
+        if (regularRoomLayerss.isEmpty()) {
+            LOG.debug("No Regular Room layers found for Unit [{}] on Floor [{}] in Block [{}]",
+                    unit.getUnitNumber(), floor.getNumber(), block.getNumber());
+            return;
+        }
 
-				List<BigDecimal> roomWidth = Util.getListOfDimensionByColourCode(pl, regularRoomLayer,
-						DxfFileConstants.INDEX_COLOR_TWO);
+        for (String regularRoomLayer : regularRoomLayerss) {
+            LOG.debug("Processing Regular Room Layer: [{}]", regularRoomLayer);
 
-				List<DXFLWPolyline> roomPolyLines = Util.getPolyLinesByLayer(pl.getDoc(), regularRoomLayer);
+            for (String type : roomOccupancyTypes) {
+                Integer colorCode = roomOccupancyFeature.get(type);
+                List<BigDecimal> regularRoomHeights = Util.getListOfDimensionByColourCode(pl, regularRoomLayer, colorCode);
+                LOG.debug("Found {} height values for type [{}] (colorCode={}) in layer [{}]",
+                        regularRoomHeights.size(), type, colorCode, regularRoomLayer);
 
-				if (!roomHeightMaps.isEmpty() || !roomPolyLines.isEmpty()) {
+                if (!regularRoomHeights.isEmpty()) {
+                    roomHeightMaps.put(colorCode, regularRoomHeights);
+                }
+            }
 
-					boolean isClosed = roomPolyLines.stream().allMatch(DXFLWPolyline::isClosed);
+            List<BigDecimal> roomWidth = Util.getListOfDimensionByColourCode(pl, regularRoomLayer,
+                    DxfFileConstants.INDEX_COLOR_TWO);
+            LOG.debug("Room width values extracted: {}", roomWidth);
 
-					Room room = new Room();
-					String[] roomNo = regularRoomLayer.split("_");
-					if (roomNo != null && roomNo.length == 9) {
-						room.setNumber(roomNo[8]);
-					}
-					room.setClosed(isClosed);
+            List<DXFLWPolyline> roomPolyLines = Util.getPolyLinesByLayer(pl.getDoc(), regularRoomLayer);
+            LOG.debug("Number of Room Polylines found: {}", roomPolyLines.size());
 
-					if (!roomWidth.isEmpty()) {
-						room.setRoomWidth(roomWidth);
-					}
+            if (!roomHeightMaps.isEmpty() || !roomPolyLines.isEmpty()) {
 
-					List<RoomHeight> roomHeights = new ArrayList<>();
-					if (!roomPolyLines.isEmpty()) {
-						List<Measurement> rooms = new ArrayList<>();
-						roomPolyLines.forEach(rp -> {
-							Measurement m = new MeasurementDetail(rp, true);
-							if (!roomHeightMaps.isEmpty() && roomHeightMaps.containsKey(m.getColorCode())) {
-								for (BigDecimal value : roomHeightMaps.get(m.getColorCode())) {
-									RoomHeight roomHeight = new RoomHeight();
-									roomHeight.setColorCode(m.getColorCode());
-									roomHeight.setHeight(value);
-									roomHeights.add(roomHeight);
-								}
-								room.setHeights(roomHeights);
-							}
-							rooms.add(m);
-						});
+                boolean isClosed = roomPolyLines.stream().allMatch(DXFLWPolyline::isClosed);
+                LOG.debug("Room Layer [{}] closed status: {}", regularRoomLayer, isClosed);
 
-                  // Extract mezzanine at regular room level
-						String regularRoomMezzLayerRegExp = String.format(
-								layerNames.getLayerName("LAYER_NAME_UNIT_MEZZANINE_AT_ROOM"), block.getNumber(),
-								floor.getNumber(), unit.getUnitNumber(), room.getNumber(), "+\\d");
+                Room room = new Room();
+                String[] roomNo = regularRoomLayer.split("_");
+                if (roomNo != null && roomNo.length == 9) {
+                    room.setNumber(roomNo[8]);
+                    LOG.debug("Room Number extracted: {}", roomNo[8]);
+                }
+                room.setClosed(isClosed);
 
-						
-						List<String> regularRoomMezzLayers = Util.getLayerNamesLike(pl.getDoc(), regularRoomMezzLayerRegExp);
-						if (!regularRoomMezzLayers.isEmpty()) {
-						    for (String layerName : regularRoomMezzLayers) {
-						        List<Occupancy> roomMezzanines = extractMezzanineAreas(pl, layerName);
-						        room.setMezzanineAreas(roomMezzanines);
-						    }
-						}
+                if (!roomWidth.isEmpty()) {
+                    room.setRoomWidth(roomWidth);
+                    LOG.debug("Room Width set: {}", roomWidth);
+                }
 
+                List<RoomHeight> roomHeights = new ArrayList<>();
+                if (!roomPolyLines.isEmpty()) {
+                    List<Measurement> rooms = new ArrayList<>();
+                    roomPolyLines.forEach(rp -> {
+                        Measurement m = new MeasurementDetail(rp, true);
+                        if (!roomHeightMaps.isEmpty() && roomHeightMaps.containsKey(m.getColorCode())) {
+                            for (BigDecimal value : roomHeightMaps.get(m.getColorCode())) {
+                                RoomHeight roomHeight = new RoomHeight();
+                                roomHeight.setColorCode(m.getColorCode());
+                                roomHeight.setHeight(value);
+                                roomHeights.add(roomHeight);
+                            }
+                            room.setHeights(roomHeights);
+                            LOG.debug("Heights set for Room [{}]: {}", room.getNumber(), roomHeights);
+                        }
+                        rooms.add(m);
+                    });
 
-						room.setRooms(rooms);
-					}
+                    // Extract mezzanine at regular room level
+                    String regularRoomMezzLayerRegExp = String.format(
+                            layerNames.getLayerName("LAYER_NAME_UNIT_MEZZANINE_AT_ROOM"),
+                            block.getNumber(), floor.getNumber(), unit.getUnitNumber(),
+                            room.getNumber(), "+\\d");
 
-					unit.addRegularRoom(room);
-                   // floor.addRegularRoom(room); 
-				}
-			}
-		}
-	}
+                    LOG.debug("Searching for mezzanine layers for Room [{}] using pattern [{}]",
+                            room.getNumber(), regularRoomMezzLayerRegExp);
+
+                    List<String> regularRoomMezzLayers = Util.getLayerNamesLike(pl.getDoc(), regularRoomMezzLayerRegExp);
+                    if (!regularRoomMezzLayers.isEmpty()) {
+                        LOG.debug("Found [{}] mezzanine layers for Room [{}]", regularRoomMezzLayers.size(), room.getNumber());
+                        for (String layerName : regularRoomMezzLayers) {
+                            List<Occupancy> roomMezzanines = extractMezzanineAreas(pl, layerName);
+                            room.setMezzanineAreas(roomMezzanines);
+                            LOG.debug("Extracted mezzanine areas for Room [{}] from layer [{}]: {}",
+                                    room.getNumber(), layerName, roomMezzanines);
+                        }
+                    }
+
+                    room.setRooms(rooms);
+                }
+
+                unit.addRegularRoom(room);
+                LOG.debug("Regular Room [{}] added to Unit [{}] on Floor [{}], Block [{}]",
+                        room.getNumber(), unit.getUnitNumber(), floor.getNumber(), block.getNumber());
+            }
+        }
+
+        LOG.debug("Completed extracting Regular Rooms for Unit [{}] on Floor [{}] in Block [{}]",
+                unit.getUnitNumber(), floor.getNumber(), block.getNumber());
+    }
 
 	/**
 	 * Extracts mezzanine areas from a specified CAD layer.
@@ -385,31 +382,60 @@ public class HeightOfRoomExtract extends FeatureExtract {
 	 * @return a list of {@link Occupancy} objects representing mezzanine areas extracted from the layer
 	 */
 
-	private List<Occupancy> extractMezzanineAreas(PlanDetail pl, String mezzanineLayerName) {
-	    List<Occupancy> roomMezzanines = new ArrayList<>();
-	    String[] array = mezzanineLayerName.split("_");
-	    String mezzanineNo = array[array.length - 1];
+    private List<Occupancy> extractMezzanineAreas(PlanDetail pl, String mezzanineLayerName) {
+        LOG.debug("Starting extraction of mezzanine areas for layer: [{}]", mezzanineLayerName);
 
-	    List<DXFLWPolyline> mezzaninePolyLines = Util.getPolyLinesByLayer(pl.getDoc(), mezzanineLayerName);
+        List<Occupancy> roomMezzanines = new ArrayList<>();
 
-	    if (!mezzaninePolyLines.isEmpty()) {
-	        for (DXFLWPolyline polyline : mezzaninePolyLines) {
-	            OccupancyDetail occupancy = new OccupancyDetail();
-	            occupancy.setColorCode(polyline.getColor());
-	            occupancy.setMezzanineNumber(mezzanineNo);
-	            occupancy.setIsMezzanine(true);
-	            occupancy.setBuiltUpArea(Util.getPolyLineArea(polyline));
-	            occupancy.setTypeHelper(Util.findOccupancyType(polyline, pl));
+        if (mezzanineLayerName == null || mezzanineLayerName.isEmpty()) {
+            LOG.debug("Mezzanine layer name is null or empty. Skipping extraction.");
+            return roomMezzanines;
+        }
 
-	            List<BigDecimal> heights = Util.getListOfDimensionValueByLayer(pl, mezzanineLayerName);
-	            if (!heights.isEmpty()) {
-	                occupancy.setHeight(Collections.max(heights));
-	            }
-	            roomMezzanines.add(occupancy);
-	        }
-	    }
-	    return roomMezzanines;
-	}
+        String[] array = mezzanineLayerName.split("_");
+        String mezzanineNo = array[array.length - 1];
+        LOG.debug("Extracted mezzanine number [{}] from layer name [{}]", mezzanineNo, mezzanineLayerName);
+
+        List<DXFLWPolyline> mezzaninePolyLines = Util.getPolyLinesByLayer(pl.getDoc(), mezzanineLayerName);
+        LOG.debug("Found [{}] mezzanine polylines for layer [{}]", mezzaninePolyLines.size(), mezzanineLayerName);
+
+        if (!mezzaninePolyLines.isEmpty()) {
+            for (DXFLWPolyline polyline : mezzaninePolyLines) {
+                LOG.debug("Processing mezzanine polyline with color code [{}]", polyline.getColor());
+
+                OccupancyDetail occupancy = new OccupancyDetail();
+                occupancy.setColorCode(polyline.getColor());
+                occupancy.setMezzanineNumber(mezzanineNo);
+                occupancy.setIsMezzanine(true);
+
+                BigDecimal area = Util.getPolyLineArea(polyline);
+                occupancy.setBuiltUpArea(area);
+                LOG.debug("Set mezzanine built-up area: [{}] for mezzanine number [{}]", area, mezzanineNo);
+
+                occupancy.setTypeHelper(Util.findOccupancyType(polyline, pl));
+
+                List<BigDecimal> heights = Util.getListOfDimensionValueByLayer(pl, mezzanineLayerName);
+                LOG.debug("Found [{}] height values for mezzanine layer [{}]", heights.size(), mezzanineLayerName);
+
+                if (!heights.isEmpty()) {
+                    BigDecimal maxHeight = Collections.max(heights);
+                    occupancy.setHeight(maxHeight);
+                    LOG.debug("Set mezzanine height to [{}] for mezzanine number [{}]", maxHeight, mezzanineNo);
+                }
+
+                roomMezzanines.add(occupancy);
+                LOG.debug("Added mezzanine occupancy detail for mezzanine number [{}]", mezzanineNo);
+            }
+        } else {
+            LOG.debug("No mezzanine polylines found for layer [{}]", mezzanineLayerName);
+        }
+
+        LOG.debug("Completed extraction of [{}] mezzanine areas for layer [{}]",
+                roomMezzanines.size(), mezzanineLayerName);
+
+        return roomMezzanines;
+    }
+
 	
 	/**
 	 * Extracts non-inhabitable rooms for a given floor unit.
@@ -438,79 +464,102 @@ public class HeightOfRoomExtract extends FeatureExtract {
 	 * @param roomOccupancyTypes   a set of occupancy types to be considered
 	 * @param layerNames           the {@link LayerNames} instance used to resolve layer naming patterns
 	 */
-	
-	private void extractNonInhabitableRoomsForUnit(PlanDetail pl, Block block, Floor floor, FloorUnit unit,
-			Map<String, Integer> roomOccupancyFeature, Set<String> roomOccupancyTypes, LayerNames layerNames) {
 
-		Map<Integer, List<BigDecimal>> nonInhabitableRoomHeightMap = new HashMap<>();
+    private void extractNonInhabitableRoomsForUnit(PlanDetail pl, Block block, Floor floor, FloorUnit unit,
+            Map<String, Integer> roomOccupancyFeature, Set<String> roomOccupancyTypes, LayerNames layerNames) {
 
-		String roomLayerName = String.format(layerNames.getLayerName("LAYER_NAME_UNIT_NON_INHABITABLE_ROOM"),
-				block.getNumber(), floor.getNumber(), unit.getUnitNumber(), "+\\d");
+        LOG.info("Starting extraction of Non-Inhabitable Rooms for Block [{}], Floor [{}], Unit [{}]",
+                block.getNumber(), floor.getNumber(), unit.getUnitNumber());
 
-		List<String> roomLayers = Util.getLayerNamesLike(pl.getDoc(), roomLayerName);
+        Map<Integer, List<BigDecimal>> nonInhabitableRoomHeightMap = new HashMap<>();
 
-		if (!roomLayers.isEmpty()) {
-			for (String roomLayer : roomLayers) {
+        String roomLayerName = String.format(layerNames.getLayerName("LAYER_NAME_UNIT_NON_INHABITABLE_ROOM"),
+                block.getNumber(), floor.getNumber(), unit.getUnitNumber(), "+\\d");
 
-				for (String type : roomOccupancyTypes) {
-					Integer colorCode = roomOccupancyFeature.get(type);
-					List<BigDecimal> roomheights = Util.getListOfDimensionByColourCode(pl, roomLayer, colorCode);
-					if (!roomheights.isEmpty()) {
-						nonInhabitableRoomHeightMap.put(colorCode, roomheights);
-					}
-				}
+        List<String> roomLayers = Util.getLayerNamesLike(pl.getDoc(), roomLayerName);
+        LOG.debug("Found {} non-inhabitable room layers matching pattern [{}]", roomLayers.size(), roomLayerName);
 
-				List<DXFLWPolyline> roomPolyLines = Util.getPolyLinesByLayer(pl.getDoc(), roomLayer);
+        if (!roomLayers.isEmpty()) {
+            for (String roomLayer : roomLayers) {
+                LOG.debug("Processing non-inhabitable room layer: {}", roomLayer);
 
-				if (!nonInhabitableRoomHeightMap.isEmpty() || !roomPolyLines.isEmpty()) {
-					boolean isClosed = roomPolyLines.stream().allMatch(DXFLWPolyline::isClosed);
+                for (String type : roomOccupancyTypes) {
+                    Integer colorCode = roomOccupancyFeature.get(type);
+                    List<BigDecimal> roomHeights = Util.getListOfDimensionByColourCode(pl, roomLayer, colorCode);
+                    if (!roomHeights.isEmpty()) {
+                        nonInhabitableRoomHeightMap.put(colorCode, roomHeights);
+                        LOG.debug("Captured height values {} for color code {} in layer {}", roomHeights, colorCode, roomLayer);
+                    }
+                }
 
-					Room room = new Room();
-					String[] roomNo = roomLayer.split("_");
-					if (roomNo != null && roomNo.length == 9) {
-						room.setNumber(roomNo[8]);
-					}
-					room.setClosed(isClosed);
+                List<DXFLWPolyline> roomPolyLines = Util.getPolyLinesByLayer(pl.getDoc(), roomLayer);
+                LOG.debug("Found {} polylines in non-inhabitable room layer {}", roomPolyLines.size(), roomLayer);
 
-					List<RoomHeight> roomHeights = new ArrayList<>();
-					if (!roomPolyLines.isEmpty()) {
-						List<Measurement> rooms = new ArrayList<>();
-						roomPolyLines.forEach(arp -> {
-							Measurement m = new MeasurementDetail(arp, true);
-							if (!nonInhabitableRoomHeightMap.isEmpty()
-									&& nonInhabitableRoomHeightMap.containsKey(m.getColorCode())) {
-								for (BigDecimal value : nonInhabitableRoomHeightMap.get(m.getColorCode())) {
-									RoomHeight roomHeight = new RoomHeight();
-									roomHeight.setColorCode(m.getColorCode());
-									roomHeight.setHeight(value);
-									roomHeights.add(roomHeight);
-								}
-								room.setHeights(roomHeights);
-							}
-							rooms.add(m);
-						});
+                if (!nonInhabitableRoomHeightMap.isEmpty() || !roomPolyLines.isEmpty()) {
+                    boolean isClosed = roomPolyLines.stream().allMatch(DXFLWPolyline::isClosed);
+                    LOG.debug("All room polylines closed: {}", isClosed);
 
-                       // Extract mezzanine at non-inhabitable room level
-						String roomMezzLayerRegExp = String.format(
-								layerNames.getLayerName("LAYER_NAME_UNIT_MEZZANINE_AT_NON_INHABITABLE_ROOM"),
-								block.getNumber(), floor.getNumber(), unit.getUnitNumber(), room.getNumber(), "+\\d");
+                    Room room = new Room();
+                    String[] roomNo = roomLayer.split("_");
+                    if (roomNo != null && roomNo.length == 9) {
+                        room.setNumber(roomNo[8]);
+                        LOG.debug("Set room number: {}", roomNo[8]);
+                    }
+                    room.setClosed(isClosed);
 
+                    List<RoomHeight> roomHeights = new ArrayList<>();
+                    if (!roomPolyLines.isEmpty()) {
+                        List<Measurement> rooms = new ArrayList<>();
+                        roomPolyLines.forEach(arp -> {
+                            Measurement m = new MeasurementDetail(arp, true);
+                            if (!nonInhabitableRoomHeightMap.isEmpty()
+                                    && nonInhabitableRoomHeightMap.containsKey(m.getColorCode())) {
+                                for (BigDecimal value : nonInhabitableRoomHeightMap.get(m.getColorCode())) {
+                                    RoomHeight roomHeight = new RoomHeight();
+                                    roomHeight.setColorCode(m.getColorCode());
+                                    roomHeight.setHeight(value);
+                                    roomHeights.add(roomHeight);
+                                }
+                                room.setHeights(roomHeights);
+                            }
+                            rooms.add(m);
+                        });
 
-						List<String> regularRoomMezzLayers = Util.getLayerNamesLike(pl.getDoc(), roomMezzLayerRegExp);
-						if (!regularRoomMezzLayers.isEmpty()) {
-						    for (String layerName : regularRoomMezzLayers) {
-						        List<Occupancy> roomMezzanines = extractMezzanineAreas(pl, layerName);
-						        room.setMezzanineAreas(roomMezzanines);
-						    }
-						}
+                        // Extract mezzanine at non-inhabitable room level
+                        String roomMezzLayerRegExp = String.format(
+                                layerNames.getLayerName("LAYER_NAME_UNIT_MEZZANINE_AT_NON_INHABITABLE_ROOM"),
+                                block.getNumber(), floor.getNumber(), unit.getUnitNumber(), room.getNumber(), "+\\d");
 
-						room.setRooms(rooms);
-					}
-					unit.addNonInhabitationalRooms(room);
-				}
-			}
-		}
-	}
+                        List<String> regularRoomMezzLayers = Util.getLayerNamesLike(pl.getDoc(), roomMezzLayerRegExp);
+                        LOG.debug("Found {} mezzanine layers for non-inhabitable room [{}]: {}",
+                                regularRoomMezzLayers.size(), room.getNumber(), regularRoomMezzLayers);
+
+                        if (!regularRoomMezzLayers.isEmpty()) {
+                            for (String layerName : regularRoomMezzLayers) {
+                                List<Occupancy> roomMezzanines = extractMezzanineAreas(pl, layerName);
+                                room.setMezzanineAreas(roomMezzanines);
+                                LOG.debug("Extracted mezzanine areas for layer [{}] - count: {}",
+                                        layerName, roomMezzanines.size());
+                            }
+                        }
+
+                        room.setRooms(rooms);
+                    }
+
+                    unit.addNonInhabitationalRooms(room);
+                    LOG.info("Added Non-Inhabitable Room [{}] to Unit [{}], Floor [{}], Block [{}]",
+                            room.getNumber(), unit.getUnitNumber(), floor.getNumber(), block.getNumber());
+                }
+            }
+        } else {
+            LOG.debug("No non-inhabitable room layers found for Unit [{}], Floor [{}], Block [{}]",
+                    unit.getUnitNumber(), floor.getNumber(), block.getNumber());
+        }
+
+        LOG.info("Completed extraction of Non-Inhabitable Rooms for Block [{}], Floor [{}], Unit [{}]",
+                block.getNumber(), floor.getNumber(), unit.getUnitNumber());
+    }
+
 	
 	/**
 	 * Extracts and assigns hilly area room heights for a given floor unit.
@@ -534,36 +583,54 @@ public class HeightOfRoomExtract extends FeatureExtract {
 	 * @param unit  the {@link FloorUnit} for which hilly area room heights need to be extracted
 	 */
 	
-	private void extractHillyAreaRoomHeights(PlanDetail pl, Block block, Floor floor, FloorUnit unit) {
-	    String hillyAreaRoomHeightLayerName = String.format(
-	        layerNames.getLayerName("LAYER_NAME_UNIT_HILLY_ROOM_HEIGHT"),
-	        block.getNumber(), floor.getNumber(), unit.getUnitNumber(), "+\\d"
-	    );
+    private void extractHillyAreaRoomHeights(PlanDetail pl, Block block, Floor floor, FloorUnit unit) {
+        LOG.debug("Starting extraction of hilly area room heights for Block [{}], Floor [{}], Unit [{}]",
+                block.getNumber(), floor.getNumber(), unit.getUnitNumber());
 
-	    List<String> hillyHeightLayers = Util.getLayerNamesLike(pl.getDoc(), hillyAreaRoomHeightLayerName);
+        String hillyAreaRoomHeightLayerName = String.format(
+                layerNames.getLayerName("LAYER_NAME_UNIT_HILLY_ROOM_HEIGHT"),
+                block.getNumber(), floor.getNumber(), unit.getUnitNumber(), "+\\d"
+        );
+        LOG.debug("Generated hilly area room height layer name pattern: {}", hillyAreaRoomHeightLayerName);
 
-	    if (!hillyHeightLayers.isEmpty()) {
-	        for (String hillyLayer : hillyHeightLayers) {
-	            String hillyHeight = Util.getMtextByLayerName(pl.getDoc(), hillyLayer);
+        List<String> hillyHeightLayers = Util.getLayerNamesLike(pl.getDoc(), hillyAreaRoomHeightLayerName);
+        LOG.debug("Found [{}] hilly area room height layers", hillyHeightLayers.size());
 
-	            List<DXFDimension> dimensionList = Util.getDimensionsByLayer(pl.getDoc(), hillyLayer);
-	            if (dimensionList != null && !dimensionList.isEmpty()) {
-	                Room room = new Room();
+        if (!hillyHeightLayers.isEmpty()) {
+            for (String hillyLayer : hillyHeightLayers) {
+                LOG.debug("Processing hilly area room height layer: {}", hillyLayer);
 
-	                BigDecimal hillyHeightValue = hillyHeight != null
-	                        ? BigDecimal.valueOf(Double.valueOf(hillyHeight.replaceAll("HILLY_ROOM_HT_M=", "")))
-	                        : BigDecimal.ZERO;
+                String hillyHeight = Util.getMtextByLayerName(pl.getDoc(), hillyLayer);
+                LOG.debug("Extracted hilly height text: {}", hillyHeight);
 
-	                room.setHillyAreaRoomHeight(hillyHeightValue);
+                List<DXFDimension> dimensionList = Util.getDimensionsByLayer(pl.getDoc(), hillyLayer);
+                LOG.debug("Found [{}] dimensions for layer [{}]", 
+                        dimensionList != null ? dimensionList.size() : 0, hillyLayer);
 
-	               
-	                unit.addRegularRoom(room);
-	               
-	                // floor.addRegularRoom(room);
-	            }
-	        }
-	    }
-	}
+                if (dimensionList != null && !dimensionList.isEmpty()) {
+                    Room room = new Room();
+
+                    BigDecimal hillyHeightValue = hillyHeight != null
+                            ? BigDecimal.valueOf(Double.valueOf(hillyHeight.replaceAll("HILLY_ROOM_HT_M=", "")))
+                            : BigDecimal.ZERO;
+
+                    LOG.debug("Parsed hilly room height value: {}", hillyHeightValue);
+
+                    room.setHillyAreaRoomHeight(hillyHeightValue);
+                    unit.addRegularRoom(room);
+
+                    LOG.debug("Added hilly area room height [{}] to unit [{}]", hillyHeightValue, unit.getUnitNumber());
+                } else {
+                    LOG.debug("No dimensions found for hilly layer [{}]; skipping room creation", hillyLayer);
+                }
+            }
+        } else {
+            LOG.debug("No hilly area room height layers found for Unit [{}]", unit.getUnitNumber());
+        }
+
+        LOG.debug("Completed extraction of hilly area room heights for Unit [{}]", unit.getUnitNumber());
+    }
+
 	
 	/**
 	 * Extracts and assigns door details for a given floor unit.
@@ -589,46 +656,69 @@ public class HeightOfRoomExtract extends FeatureExtract {
 	 * @param unit  the {@link FloorUnit} for which door details need to be extracted
 	 */
 	
-	private void extractDoorDetails(PlanDetail pl, Block block, Floor floor, FloorUnit unit) {
-	    String doorLayerName = String.format(
-	        layerNames.getLayerName("LAYER_NAME_UNIT_DOOR"),
-	        block.getNumber(), floor.getNumber(), unit.getUnitNumber(), "+\\d"
-	    );
+    private void extractDoorDetails(PlanDetail pl, Block block, Floor floor, FloorUnit unit) {
+        LOG.debug("Starting extraction of door details for Block [{}], Floor [{}], Unit [{}]",
+                block.getNumber(), floor.getNumber(), unit.getUnitNumber());
 
-	    List<String> doorLayers = Util.getLayerNamesLike(pl.getDoc(), doorLayerName);
+        String doorLayerName = String.format(
+                layerNames.getLayerName("LAYER_NAME_UNIT_DOOR"),
+                block.getNumber(), floor.getNumber(), unit.getUnitNumber(), "+\\d"
+        );
+        LOG.debug("Generated door layer name pattern: {}", doorLayerName);
 
-	    if (!doorLayers.isEmpty()) {
-	        for (String doorLayer : doorLayers) {
-	            String doorHeight = Util.getMtextByLayerName(pl.getDoc(), doorLayer);
+        List<String> doorLayers = Util.getLayerNamesLike(pl.getDoc(), doorLayerName);
+        LOG.debug("Found [{}] door layers for Unit [{}]", doorLayers.size(), unit.getUnitNumber());
 
-	            List<DXFDimension> dimensionList = Util.getDimensionsByLayer(pl.getDoc(), doorLayer);
-	            if (dimensionList != null && !dimensionList.isEmpty()) {
-	                Door door = new Door();
+        if (!doorLayers.isEmpty()) {
+            for (String doorLayer : doorLayers) {
+                LOG.debug("Processing door layer: {}", doorLayer);
 
-	                BigDecimal doorHeightValue = doorHeight != null
-	                        ? BigDecimal.valueOf(Double.valueOf(doorHeight.replaceAll("DOOR_HT_M=", "")))
-	                        : BigDecimal.ZERO;
-	                door.setDoorHeight(doorHeightValue);
+                String doorHeight = Util.getMtextByLayerName(pl.getDoc(), doorLayer);
+                LOG.debug("Extracted door height text: {}", doorHeight);
 
-	                for (Object dxfEntity : dimensionList) {
-	                    DXFDimension dimension = (DXFDimension) dxfEntity;
-	                    List<BigDecimal> values = new ArrayList<>();
-	                    Util.extractDimensionValue(pl, values, dimension, doorLayer);
+                List<DXFDimension> dimensionList = Util.getDimensionsByLayer(pl.getDoc(), doorLayer);
+                LOG.debug("Found [{}] dimensions for layer [{}]",
+                        dimensionList != null ? dimensionList.size() : 0, doorLayer);
 
-	                    if (!values.isEmpty()) {
-	                        for (BigDecimal minDis : values) {
-	                            door.setDoorWidth(minDis);
-	                        }
-	                    } else {
-	                        door.setDoorWidth(BigDecimal.ZERO);
-	                    }
-	                }
+                if (dimensionList != null && !dimensionList.isEmpty()) {
+                    Door door = new Door();
 
-	                unit.addDoor(door);
-	            }
-	        }
-	    }
-	}
+                    BigDecimal doorHeightValue = doorHeight != null
+                            ? BigDecimal.valueOf(Double.valueOf(doorHeight.replaceAll("DOOR_HT_M=", "")))
+                            : BigDecimal.ZERO;
+
+                    door.setDoorHeight(doorHeightValue);
+                    LOG.debug("Parsed and set door height: {}", doorHeightValue);
+
+                    for (Object dxfEntity : dimensionList) {
+                        DXFDimension dimension = (DXFDimension) dxfEntity;
+                        List<BigDecimal> values = new ArrayList<>();
+                        Util.extractDimensionValue(pl, values, dimension, doorLayer);
+
+                        if (!values.isEmpty()) {
+                            for (BigDecimal minDis : values) {
+                                door.setDoorWidth(minDis);
+                                LOG.debug("Extracted and set door width: {}", minDis);
+                            }
+                        } else {
+                            door.setDoorWidth(BigDecimal.ZERO);
+                            LOG.debug("No width values found for layer [{}], defaulting to 0", doorLayer);
+                        }
+                    }
+
+                    unit.addDoor(door);
+                    LOG.debug("Added door with height [{}] and width [{}] to Unit [{}]",
+                            door.getDoorHeight(), door.getDoorWidth(), unit.getUnitNumber());
+                } else {
+                    LOG.debug("No dimensions found for door layer [{}], skipping door creation", doorLayer);
+                }
+            }
+        } else {
+            LOG.debug("No door layers found for Unit [{}]", unit.getUnitNumber());
+        }
+
+        LOG.debug("Completed extraction of door details for Unit [{}]", unit.getUnitNumber());
+    }
 
 
 	/**
@@ -653,46 +743,69 @@ public class HeightOfRoomExtract extends FeatureExtract {
 	 * @param unit  the {@link FloorUnit} for which non-habitational door details need to be extracted
 	 */
 	
-	private void extractNonHabitationalDoorDetails(PlanDetail pl, Block block, Floor floor, FloorUnit unit) {
-	    String nonHabitationaldoorLayer = String.format(
-	        layerNames.getLayerName("LAYER_NAME_UNIT_NON_HABITATIONAL_DOOR"),
-	        block.getNumber(), floor.getNumber(), unit.getUnitNumber(), "+\\d"
-	    );
+    private void extractNonHabitationalDoorDetails(PlanDetail pl, Block block, Floor floor, FloorUnit unit) {
+        LOG.debug("Starting extraction of non-habitational door details for Block [{}], Floor [{}], Unit [{}]",
+                block.getNumber(), floor.getNumber(), unit.getUnitNumber());
 
-	    List<String> nonHabitationaldoorLayers = Util.getLayerNamesLike(pl.getDoc(), nonHabitationaldoorLayer);
+        String nonHabitationaldoorLayer = String.format(
+                layerNames.getLayerName("LAYER_NAME_UNIT_NON_HABITATIONAL_DOOR"),
+                block.getNumber(), floor.getNumber(), unit.getUnitNumber(), "+\\d"
+        );
+        LOG.debug("Generated non-habitational door layer name pattern: {}", nonHabitationaldoorLayer);
 
-	    if (!nonHabitationaldoorLayers.isEmpty()) {
-	        for (String doorLayer : nonHabitationaldoorLayers) {
-	            String doorHeight = Util.getMtextByLayerName(pl.getDoc(), doorLayer);
+        List<String> nonHabitationaldoorLayers = Util.getLayerNamesLike(pl.getDoc(), nonHabitationaldoorLayer);
+        LOG.debug("Found [{}] non-habitational door layers for Unit [{}]", nonHabitationaldoorLayers.size(), unit.getUnitNumber());
 
-	            List<DXFDimension> dimensionList = Util.getDimensionsByLayer(pl.getDoc(), doorLayer);
-	            if (dimensionList != null && !dimensionList.isEmpty()) {
-	                Door door = new Door();
+        if (!nonHabitationaldoorLayers.isEmpty()) {
+            for (String doorLayer : nonHabitationaldoorLayers) {
+                LOG.debug("Processing non-habitational door layer: {}", doorLayer);
 
-	                BigDecimal doorHeightValue = doorHeight != null
-	                        ? BigDecimal.valueOf(Double.valueOf(doorHeight.replaceAll("DOOR_HT_M=", "")))
-	                        : BigDecimal.ZERO;
-	                door.setNonHabitationDoorHeight(doorHeightValue);
+                String doorHeight = Util.getMtextByLayerName(pl.getDoc(), doorLayer);
+                LOG.debug("Extracted door height text: {}", doorHeight);
 
-	                for (Object dxfEntity : dimensionList) {
-	                    DXFDimension dimension = (DXFDimension) dxfEntity;
-	                    List<BigDecimal> values = new ArrayList<>();
-	                    Util.extractDimensionValue(pl, values, dimension, doorLayer);
+                List<DXFDimension> dimensionList = Util.getDimensionsByLayer(pl.getDoc(), doorLayer);
+                LOG.debug("Found [{}] dimensions for layer [{}]",
+                        dimensionList != null ? dimensionList.size() : 0, doorLayer);
 
-	                    if (!values.isEmpty()) {
-	                        for (BigDecimal minDis : values) {
-	                            door.setNonHabitationDoorWidth(minDis);
-	                        }
-	                    } else {
-	                        door.setNonHabitationDoorWidth(BigDecimal.ZERO);
-	                    }
-	                }
+                if (dimensionList != null && !dimensionList.isEmpty()) {
+                    Door door = new Door();
 
-	                unit.addNonaHabitationalDoors(door);
-	            }
-	        }
-	    }
-	}
+                    BigDecimal doorHeightValue = doorHeight != null
+                            ? BigDecimal.valueOf(Double.valueOf(doorHeight.replaceAll("DOOR_HT_M=", "")))
+                            : BigDecimal.ZERO;
+                    door.setNonHabitationDoorHeight(doorHeightValue);
+                    LOG.debug("Parsed and set non-habitational door height: {}", doorHeightValue);
+
+                    for (Object dxfEntity : dimensionList) {
+                        DXFDimension dimension = (DXFDimension) dxfEntity;
+                        List<BigDecimal> values = new ArrayList<>();
+                        Util.extractDimensionValue(pl, values, dimension, doorLayer);
+
+                        if (!values.isEmpty()) {
+                            for (BigDecimal minDis : values) {
+                                door.setNonHabitationDoorWidth(minDis);
+                                LOG.debug("Extracted and set non-habitational door width: {}", minDis);
+                            }
+                        } else {
+                            door.setNonHabitationDoorWidth(BigDecimal.ZERO);
+                            LOG.debug("No width values found for layer [{}], defaulting to 0", doorLayer);
+                        }
+                    }
+
+                    unit.addNonaHabitationalDoors(door);
+                    LOG.debug("Added non-habitational door with height [{}] and width [{}] to Unit [{}]",
+                            door.getNonHabitationDoorHeight(), door.getNonHabitationDoorWidth(), unit.getUnitNumber());
+                } else {
+                    LOG.debug("No dimensions found for non-habitational door layer [{}], skipping door creation", doorLayer);
+                }
+            }
+        } else {
+            LOG.debug("No non-habitational door layers found for Unit [{}]", unit.getUnitNumber());
+        }
+
+        LOG.debug("Completed extraction of non-habitational door details for Unit [{}]", unit.getUnitNumber());
+    }
+
 
 	/**
 	 * Extracts and assigns doors for each regular room inside a given floor unit. 
@@ -714,48 +827,72 @@ public class HeightOfRoomExtract extends FeatureExtract {
 	 * @param floor the {@link Floor} that contains the unit
 	 * @param unit  the {@link FloorUnit} for which room-wise doors need to be extracted
 	 */
-	
-	private void extractRoomWiseDoors(PlanDetail pl, Block block, Floor floor, FloorUnit unit) {
-	    for (Room room : unit.getRegularRooms()) {
-	        String roomDoorLayerName = String.format(
-	            layerNames.getLayerName("LAYER_NAME_UNIT_REGULAR_ROOM_DOOR"),
-	            block.getNumber(), floor.getNumber(), unit.getUnitNumber(), room.getNumber(), "+\\d"
-	        );
+    
+    private void extractRoomWiseDoors(PlanDetail pl, Block block, Floor floor, FloorUnit unit) {
+        LOG.debug("Starting extractRoomWiseDoors for Block [{}], Floor [{}], Unit [{}]",
+                block.getNumber(), floor.getNumber(), unit.getUnitNumber());
 
-	        List<String> roomDoorLayers = Util.getLayerNamesLike(pl.getDoc(), roomDoorLayerName);
+        for (Room room : unit.getRegularRooms()) {
+            LOG.debug("Processing doors for Room [{}] in Unit [{}]", room.getNumber(), unit.getUnitNumber());
 
-	        if (!roomDoorLayers.isEmpty()) {
-	            for (String doorLayer : roomDoorLayers) {
-	                String doorHeight = Util.getMtextByLayerName(pl.getDoc(), doorLayer);
+            String roomDoorLayerName = String.format(
+                    layerNames.getLayerName("LAYER_NAME_UNIT_REGULAR_ROOM_DOOR"),
+                    block.getNumber(), floor.getNumber(), unit.getUnitNumber(), room.getNumber(), "+\\d"
+            );
 
-	                List<DXFDimension> dimensionList = Util.getDimensionsByLayer(pl.getDoc(), doorLayer);
-	                if (dimensionList != null && !dimensionList.isEmpty()) {
-	                    Door door = new Door();
+            List<String> roomDoorLayers = Util.getLayerNamesLike(pl.getDoc(), roomDoorLayerName);
+            LOG.debug("Found [{}] matching door layers for room [{}]: {}", roomDoorLayers.size(), room.getNumber(), roomDoorLayers);
 
-	                    BigDecimal doorHeightValue = doorHeight != null
-	                            ? BigDecimal.valueOf(Double.valueOf(doorHeight.replaceAll("DOOR_HT_M=", "")))
-	                            : BigDecimal.ZERO;
-	                    door.setDoorHeight(doorHeightValue);
+            if (!roomDoorLayers.isEmpty()) {
+                for (String doorLayer : roomDoorLayers) {
+                    LOG.debug("Processing door layer [{}] for Room [{}]", doorLayer, room.getNumber());
 
-	                    for (Object dxfEntity : dimensionList) {
-	                        DXFDimension dimension = (DXFDimension) dxfEntity;
-	                        List<BigDecimal> values = new ArrayList<>();
-	                        Util.extractDimensionValue(pl, values, dimension, doorLayer);
+                    String doorHeight = Util.getMtextByLayerName(pl.getDoc(), doorLayer);
+                    LOG.debug("Extracted door height text [{}] from layer [{}]", doorHeight, doorLayer);
 
-	                        if (!values.isEmpty()) {
-	                            for (BigDecimal minDis : values) {
-	                                door.setDoorWidth(minDis);
-	                            }
-	                        } else {
-	                            door.setDoorWidth(BigDecimal.ZERO);
-	                        }
-	                    }
-	                    room.addDoors(door);
-	                }
-	            }
-	        }
-	    }
-	}
+                    List<DXFDimension> dimensionList = Util.getDimensionsByLayer(pl.getDoc(), doorLayer);
+                    LOG.debug("Found [{}] dimensions for door layer [{}]", 
+                            dimensionList != null ? dimensionList.size() : 0, doorLayer);
+
+                    if (dimensionList != null && !dimensionList.isEmpty()) {
+                        Door door = new Door();
+
+                        BigDecimal doorHeightValue = doorHeight != null
+                                ? BigDecimal.valueOf(Double.valueOf(doorHeight.replaceAll("DOOR_HT_M=", "")))
+                                : BigDecimal.ZERO;
+                        door.setDoorHeight(doorHeightValue);
+                        LOG.debug("Set door height to [{}] for Room [{}]", doorHeightValue, room.getNumber());
+
+                        for (Object dxfEntity : dimensionList) {
+                            DXFDimension dimension = (DXFDimension) dxfEntity;
+                            List<BigDecimal> values = new ArrayList<>();
+                            Util.extractDimensionValue(pl, values, dimension, doorLayer);
+
+                            if (!values.isEmpty()) {
+                                for (BigDecimal minDis : values) {
+                                    door.setDoorWidth(minDis);
+                                    LOG.debug("Set door width to [{}] for Room [{}]", minDis, room.getNumber());
+                                }
+                            } else {
+                                door.setDoorWidth(BigDecimal.ZERO);
+                                LOG.debug("No dimension values found, setting default door width = 0 for Room [{}]", room.getNumber());
+                            }
+                        }
+                        room.addDoors(door);
+                        LOG.debug("Added door to Room [{}] in Unit [{}]", room.getNumber(), unit.getUnitNumber());
+                    } else {
+                        LOG.debug("No dimension entities found for layer [{}]", doorLayer);
+                    }
+                }
+            } else {
+                LOG.debug("No door layers found for Room [{}] in Unit [{}]", room.getNumber(), unit.getUnitNumber());
+            }
+        }
+
+        LOG.debug("Completed extractRoomWiseDoors for Block [{}], Floor [{}], Unit [{}]",
+                block.getNumber(), floor.getNumber(), unit.getUnitNumber());
+    }
+
 	
 	/**
 	 * Extracts window details (height and width) for all regular rooms in a given floor
@@ -772,52 +909,75 @@ public class HeightOfRoomExtract extends FeatureExtract {
 	 * @param floor       the {@link Floor} for which windows are to be extracted
 	 * @param layerNames  the {@link LayerNames} utility for resolving CAD layer naming conventions
 	 */
-	private void extractWindows(PlanDetail pl, Block block, Floor floor, FloorUnit unit, LayerNames layerNames) {
-	    for (Room room : unit.getRegularRooms()) {
+    private void extractWindows(PlanDetail pl, Block block, Floor floor, FloorUnit unit, LayerNames layerNames) {
+        LOG.debug("Starting window extraction for Block [{}], Floor [{}], Unit [{}]", 
+                  block.getNumber(), floor.getNumber(), unit.getUnitNumber());
 
-	        String windowLayerName = String.format(
-	                layerNames.getLayerName("LAYER_NAME_UNIT_ROOM_WINDOW"),
-	                block.getNumber(),
-	                floor.getNumber(),
-	                unit.getUnitNumber(),
-	                room.getNumber(),
-	                "+\\d"
-	        );
+        for (Room room : unit.getRegularRooms()) {
+            LOG.debug("Processing windows for Room [{}] in Unit [{}]", room.getNumber(), unit.getUnitNumber());
 
-	        List<String> windowLayers = Util.getLayerNamesLike(pl.getDoc(), windowLayerName);
+            String windowLayerName = String.format(
+                    layerNames.getLayerName("LAYER_NAME_UNIT_ROOM_WINDOW"),
+                    block.getNumber(),
+                    floor.getNumber(),
+                    unit.getUnitNumber(),
+                    room.getNumber(),
+                    "+\\d"
+            );
 
-	        if (!windowLayers.isEmpty()) {
-	            for (String windowLayer : windowLayers) {
-	                String windowHeight = Util.getMtextByLayerName(pl.getDoc(), windowLayer);
+            LOG.debug("Generated window layer name pattern: {}", windowLayerName);
 
-	                List<DXFDimension> dimensionList = Util.getDimensionsByLayer(pl.getDoc(), windowLayer);
-	                if (dimensionList != null && !dimensionList.isEmpty()) {
-	                    Window window = new Window();
-	                    BigDecimal windowHeight1 = windowHeight != null
-	                            ? BigDecimal.valueOf(
-	                                    Double.valueOf(windowHeight.replaceAll("WINDOW_HT_M=", "")))
-	                            : BigDecimal.ZERO;
-	                    window.setWindowHeight(windowHeight1);
+            List<String> windowLayers = Util.getLayerNamesLike(pl.getDoc(), windowLayerName);
+            LOG.debug("Found [{}] window layers matching pattern [{}]", windowLayers.size(), windowLayerName);
 
-	                    for (Object dxfEntity : dimensionList) {
-	                        DXFDimension dimension = (DXFDimension) dxfEntity;
-	                        List<BigDecimal> values = new ArrayList<>();
-	                        Util.extractDimensionValue(pl, values, dimension, windowLayer);
+            if (!windowLayers.isEmpty()) {
+                for (String windowLayer : windowLayers) {
+                    LOG.debug("Processing window layer: {}", windowLayer);
 
-	                        if (!values.isEmpty()) {
-	                            for (BigDecimal minDis : values) {
-	                                window.setWindowWidth(minDis);
-	                            }
-	                        } else {
-	                            window.setWindowWidth(BigDecimal.ZERO);
-	                        }
-	                    }
-	                    room.addWindow(window);
-	                }
-	            }
-	        }
-	    }
-	}
+                    String windowHeight = Util.getMtextByLayerName(pl.getDoc(), windowLayer);
+                    LOG.debug("Extracted window height text: {}", windowHeight);
+
+                    List<DXFDimension> dimensionList = Util.getDimensionsByLayer(pl.getDoc(), windowLayer);
+                    LOG.debug("Found [{}] dimensions for window layer [{}]", 
+                              dimensionList != null ? dimensionList.size() : 0, windowLayer);
+
+                    if (dimensionList != null && !dimensionList.isEmpty()) {
+                        Window window = new Window();
+
+                        BigDecimal windowHeight1 = windowHeight != null
+                                ? BigDecimal.valueOf(Double.valueOf(windowHeight.replaceAll("WINDOW_HT_M=", "")))
+                                : BigDecimal.ZERO;
+                        window.setWindowHeight(windowHeight1);
+                        LOG.debug("Set window height to [{}]", windowHeight1);
+
+                        for (Object dxfEntity : dimensionList) {
+                            DXFDimension dimension = (DXFDimension) dxfEntity;
+                            List<BigDecimal> values = new ArrayList<>();
+                            Util.extractDimensionValue(pl, values, dimension, windowLayer);
+                            LOG.debug("Extracted dimension values: {}", values);
+
+                            if (!values.isEmpty()) {
+                                for (BigDecimal minDis : values) {
+                                    window.setWindowWidth(minDis);
+                                    LOG.debug("Set window width to [{}]", minDis);
+                                }
+                            } else {
+                                window.setWindowWidth(BigDecimal.ZERO);
+                                LOG.debug("No dimension values found; setting window width to 0");
+                            }
+                        }
+                        room.addWindow(window);
+                        LOG.debug("Added window to Room [{}]", room.getNumber());
+                    }
+                }
+            } else {
+                LOG.debug("No window layers found for Room [{}]", room.getNumber());
+            }
+        }
+
+        LOG.debug("Completed window extraction for Block [{}], Floor [{}], Unit [{}]", 
+                  block.getNumber(), floor.getNumber(), unit.getUnitNumber());
+    }
 
 	/**
 	 * Extracts window details (height and width) for a given floor and
@@ -834,437 +994,70 @@ public class HeightOfRoomExtract extends FeatureExtract {
 	 * @param floor       the {@link Floor} for which windows are to be extracted
 	 * @param layerNames  the {@link LayerNames} utility for resolving CAD layer naming conventions
 	 */
-	private void extractWindowsForUnitLevel(PlanDetail pl, Block block, Floor floor, FloorUnit unit, LayerNames layerNames) {
-	    String windowLayerName = String.format(
-	            layerNames.getLayerName("LAYER_NAME_UNIT_WINDOW"),
-	            block.getNumber(),
-	            floor.getNumber(),
-	            unit.getUnitNumber(),
-	            "+\\d"
-	    );
+    private void extractWindowsForUnitLevel(PlanDetail pl, Block block, Floor floor, FloorUnit unit, LayerNames layerNames) {
+        LOG.debug("Starting window extraction for Unit Level - Block [{}], Floor [{}], Unit [{}]", 
+                  block.getNumber(), floor.getNumber(), unit.getUnitNumber());
 
-	    List<String> windowLayers = Util.getLayerNamesLike(pl.getDoc(), windowLayerName);
+        String windowLayerName = String.format(
+                layerNames.getLayerName("LAYER_NAME_UNIT_WINDOW"),
+                block.getNumber(),
+                floor.getNumber(),
+                unit.getUnitNumber(),
+                "+\\d"
+        );
+        LOG.debug("Generated window layer name pattern: {}", windowLayerName);
 
-	    if (!windowLayers.isEmpty()) {
-	        for (String windowLayer : windowLayers) {
-	            String windowHeight = Util.getMtextByLayerName(pl.getDoc(), windowLayer);
+        List<String> windowLayers = Util.getLayerNamesLike(pl.getDoc(), windowLayerName);
+        LOG.debug("Found [{}] window layers matching pattern [{}]", windowLayers.size(), windowLayerName);
 
-	            List<DXFDimension> dimensionList = Util.getDimensionsByLayer(pl.getDoc(), windowLayer);
-	            if (dimensionList != null && !dimensionList.isEmpty()) {
-	                Window window = new Window();
-	                BigDecimal windowHeight1 = windowHeight != null
-	                        ? BigDecimal.valueOf(
-	                                Double.valueOf(windowHeight.replaceAll("WINDOW_HT_M=", "")))
-	                        : BigDecimal.ZERO;
-	                window.setWindowHeight(windowHeight1);
+        if (!windowLayers.isEmpty()) {
+            for (String windowLayer : windowLayers) {
+                LOG.debug("Processing window layer: {}", windowLayer);
 
-	                for (Object dxfEntity : dimensionList) {
-	                    DXFDimension dimension = (DXFDimension) dxfEntity;
-	                    List<BigDecimal> values = new ArrayList<>();
-	                    Util.extractDimensionValue(pl, values, dimension, windowLayer);
+                String windowHeight = Util.getMtextByLayerName(pl.getDoc(), windowLayer);
+                LOG.debug("Extracted window height text: {}", windowHeight);
 
-	                    if (!values.isEmpty()) {
-	                        for (BigDecimal minDis : values) {
-	                            window.setWindowWidth(minDis);
-	                        }
-	                    } else {
-	                        window.setWindowWidth(BigDecimal.ZERO);
-	                    }
-	                }
-	                unit.addWindow(window);
-	            }
-	        }
-	    }
-	}
+                List<DXFDimension> dimensionList = Util.getDimensionsByLayer(pl.getDoc(), windowLayer);
+                LOG.debug("Found [{}] dimensions for window layer [{}]", 
+                          dimensionList != null ? dimensionList.size() : 0, windowLayer);
 
+                if (dimensionList != null && !dimensionList.isEmpty()) {
+                    Window window = new Window();
 
-	 /*
-     * Extract AC room
-     */
-	/*
-	 * Map<Integer, List<BigDecimal>> acRoomHeightMap = new HashMap<>();
-	 * 
-	 * String acRoomLayerName =
-	 * String.format(layerNames.getLayerName("LAYER_NAME_AC_ROOM"),
-	 * block.getNumber(), floor.getNumber(), "+\\d");
-	 * 
-	 * List<String> acRoomLayers = Util.getLayerNamesLike(pl.getDoc(),
-	 * acRoomLayerName);
-	 * 
-	 * if (!acRoomLayers.isEmpty()) {
-	 * 
-	 * for (String acRoomLayer : acRoomLayers) {
-	 * 
-	 * for (String type : roomOccupancyTypes) { Integer colorCode =
-	 * roomOccupancyFeature.get(type); List<BigDecimal> acRoomheights =
-	 * Util.getListOfDimensionByColourCode(pl, acRoomLayer, colorCode); if
-	 * (!acRoomheights.isEmpty()) acRoomHeightMap.put(colorCode, acRoomheights); }
-	 * 
-	 * List<DXFLWPolyline> acRoomPolyLines = Util.getPolyLinesByLayer(pl.getDoc(),
-	 * acRoomLayer);
-	 * 
-	 * if (!acRoomHeightMap.isEmpty() || !acRoomPolyLines.isEmpty()) { boolean
-	 * isClosed = acRoomPolyLines.stream() .allMatch(dxflwPolyline ->
-	 * dxflwPolyline.isClosed());
-	 * 
-	 * Room acRoom = new Room(); String[] roomNo = acRoomLayer.split("_"); if
-	 * (roomNo != null && roomNo.length == 7) { acRoom.setNumber(roomNo[6]); }
-	 * acRoom.setClosed(isClosed);
-	 * 
-	 * List<RoomHeight> acRoomHeights = new ArrayList<>(); if
-	 * (!acRoomPolyLines.isEmpty()) { List<Measurement> acRooms = new
-	 * ArrayList<Measurement>(); acRoomPolyLines.stream().forEach(arp -> {
-	 * Measurement m = new MeasurementDetail(arp, true); if
-	 * (!acRoomHeightMap.isEmpty() && acRoomHeightMap.containsKey(m.getColorCode()))
-	 * { for (BigDecimal value : acRoomHeightMap.get(m.getColorCode())) { RoomHeight
-	 * roomHeight = new RoomHeight(); roomHeight.setColorCode(m.getColorCode());
-	 * roomHeight.setHeight(value); acRoomHeights.add(roomHeight); }
-	 * acRoom.setHeights(acRoomHeights); } acRooms.add(m); });
-	 * 
-	 * // Extract the Mezzanine Area if is declared at ac room level String
-	 * acRoomMezzLayerRegExp = String
-	 * .format(layerNames.getLayerName("LAYER_NAME_MEZZANINE_AT_ACROOM"),
-	 * block.getNumber(), floor.getNumber(), acRoom.getNumber(), "+\\d");
-	 * List<String> acRoomMezzLayers = Util.getLayerNamesLike(pl.getDoc(),
-	 * acRoomMezzLayerRegExp); if (!acRoomMezzLayers.isEmpty()) { for (String
-	 * layerName : acRoomMezzLayers) { List<Occupancy> roomMezzanines = new
-	 * ArrayList<>(); String[] array = layerName.split("_"); String mezzanineNo =
-	 * array[8]; List<DXFLWPolyline> mezzaninePolyLines =
-	 * Util.getPolyLinesByLayer(pl.getDoc(), layerName); if
-	 * (!mezzaninePolyLines.isEmpty()) for (DXFLWPolyline polyline :
-	 * mezzaninePolyLines) { OccupancyDetail occupancy = new OccupancyDetail();
-	 * occupancy.setColorCode(polyline.getColor());
-	 * occupancy.setMezzanineNumber(mezzanineNo); occupancy.setIsMezzanine(true);
-	 * occupancy.setBuiltUpArea(Util.getPolyLineArea(polyline));
-	 * occupancy.setTypeHelper(Util.findOccupancyType(polyline, pl));
-	 * List<BigDecimal> heights = Util.getListOfDimensionValueByLayer(pl,
-	 * layerName); if (!heights.isEmpty())
-	 * occupancy.setHeight(Collections.max(heights)); roomMezzanines.add(occupancy);
-	 * } acRoom.setMezzanineAreas(roomMezzanines); } }
-	 * 
-	 * acRoom.setRooms(acRooms); } floor.addAcRoom(acRoom); }
-	 * 
-	 * }
-	 * 
-	 * }
-	 */
-    
+                    BigDecimal windowHeight1 = windowHeight != null
+                            ? BigDecimal.valueOf(Double.valueOf(windowHeight.replaceAll("WINDOW_HT_M=", "")))
+                            : BigDecimal.ZERO;
+                    window.setWindowHeight(windowHeight1);
+                    LOG.debug("Set window height to [{}]", windowHeight1);
 
-    /*
-     * Extract regular room
-     */
-    
-    /*   ------------------------------ 
-    original code */
-	/*
-	 * Map<Integer, List<BigDecimal>> roomHeightMap = new HashMap<>();
-	 * 
-	 * String regularRoomLayerName =
-	 * String.format(layerNames.getLayerName("LAYER_NAME_REGULAR_ROOM"),
-	 * block.getNumber(), floor.getNumber(), "+\\d");
-	 * 
-	 * List<String> regularRoomLayers = Util.getLayerNamesLike(pl.getDoc(),
-	 * regularRoomLayerName);
-	 * 
-	 * if (!regularRoomLayers.isEmpty()) {
-	 * 
-	 * for (String regularRoomLayer : regularRoomLayers) {
-	 * 
-	 * for (String type : roomOccupancyTypes) { Integer colorCode =
-	 * roomOccupancyFeature.get(type); List<BigDecimal> regularRoomheights =
-	 * Util.getListOfDimensionByColourCode(pl, regularRoomLayer, colorCode); if
-	 * (!regularRoomheights.isEmpty()) roomHeightMap.put(colorCode,
-	 * regularRoomheights); }
-	 * 
-	 * List<BigDecimal> roomWidth = Util.getListOfDimensionByColourCode(pl,
-	 * regularRoomLayer, DxfFileConstants.INDEX_COLOR_TWO);
-	 * 
-	 * 
-	 * List<DXFLWPolyline> roomPolyLines = Util.getPolyLinesByLayer(pl.getDoc(),
-	 * regularRoomLayer);
-	 * 
-	 * if (!roomHeightMap.isEmpty() || !roomPolyLines.isEmpty()) {
-	 * 
-	 * boolean isClosed = roomPolyLines.stream() .allMatch(dxflwPolyline ->
-	 * dxflwPolyline.isClosed());
-	 * 
-	 * Room room = new Room(); String[] roomNo = regularRoomLayer.split("_"); if
-	 * (roomNo != null && roomNo.length == 7) { room.setNumber(roomNo[6]); }
-	 * room.setClosed(isClosed);
-	 * 
-	 * if (!roomWidth.isEmpty()) { room.setRoomWidth(roomWidth); } List<RoomHeight>
-	 * roomHeights = new ArrayList<>(); if (!roomPolyLines.isEmpty()) {
-	 * List<Measurement> rooms = new ArrayList<Measurement>();
-	 * roomPolyLines.stream().forEach(rp -> { Measurement m = new
-	 * MeasurementDetail(rp, true); if (!roomHeightMap.isEmpty() &&
-	 * roomHeightMap.containsKey(m.getColorCode())) { for (BigDecimal value :
-	 * roomHeightMap.get(m.getColorCode())) { RoomHeight roomHeight = new
-	 * RoomHeight(); roomHeight.setColorCode(m.getColorCode());
-	 * roomHeight.setHeight(value); roomHeights.add(roomHeight); }
-	 * room.setHeights(roomHeights); } rooms.add(m); }); // Extract the Mezzanine
-	 * Area if is declared at ac room level String regularRoomMezzLayerRegExp =
-	 * String .format(layerNames.getLayerName("LAYER_NAME_MEZZANINE_AT_ROOM"),
-	 * block.getNumber(), floor.getNumber(), room.getNumber(), "+\\d"); List<String>
-	 * regularRoomMezzLayers = Util.getLayerNamesLike(pl.getDoc(),
-	 * regularRoomMezzLayerRegExp); if (!regularRoomMezzLayers.isEmpty()) { for
-	 * (String layerName : regularRoomMezzLayers) { List<Occupancy> roomMezzanines =
-	 * new ArrayList<>(); String[] array = layerName.split("_"); String mezzanineNo
-	 * = array[8]; List<DXFLWPolyline> mezzaninePolyLines =
-	 * Util.getPolyLinesByLayer(pl.getDoc(), layerName); if
-	 * (!mezzaninePolyLines.isEmpty()) for (DXFLWPolyline polyline :
-	 * mezzaninePolyLines) { OccupancyDetail occupancy = new OccupancyDetail();
-	 * occupancy.setColorCode(polyline.getColor());
-	 * occupancy.setMezzanineNumber(mezzanineNo); occupancy.setIsMezzanine(true);
-	 * occupancy.setBuiltUpArea(Util.getPolyLineArea(polyline));
-	 * occupancy.setTypeHelper(Util.findOccupancyType(polyline, pl));
-	 * List<BigDecimal> heights = Util.getListOfDimensionValueByLayer(pl,
-	 * layerName); if (!heights.isEmpty())
-	 * occupancy.setHeight(Collections.max(heights)); roomMezzanines.add(occupancy);
-	 * } room.setMezzanineAreas(roomMezzanines); } } room.setRooms(rooms); }
-	 * floor.addRegularRoom(room); } } }
-	 */
-    
-    
-    /*
-     * Extract regular room (unit-wise)
-     * 
-     * 
-     */
-    
-  
-   
-                            /*
-//     * Extract Non Inhabitable room
-//     */
-  
-							/*
-							 * Map<Integer, List<BigDecimal>> nonInhabitableRoomHeightMap = new
-							 * HashMap<>();
-							 * 
-							 * String roomLayerName = String.format(layerNames.getLayerName(
-							 * "LAYER_NAME_NON_INHABITABLE_ROOM"), block.getNumber(),
-							 * floor.getNumber(), "+\\d");
-							 * 
-							 * List<String> roomLayers = Util.getLayerNamesLike(pl.getDoc(),
-							 * roomLayerName);
-							 * 
-							 * if (!roomLayers.isEmpty()) {
-							 * 
-							 * for (String roomLayer : roomLayers) {
-							 * 
-							 * for (String type : roomOccupancyTypes) { Integer colorCode =
-							 * roomOccupancyFeature.get(type); List<BigDecimal> roomheights =
-							 * Util.getListOfDimensionByColourCode(pl, roomLayer, colorCode); if
-							 * (!roomheights.isEmpty()) nonInhabitableRoomHeightMap.put(colorCode,
-							 * roomheights); }
-							 * 
-							 * List<DXFLWPolyline> roomPolyLines =
-							 * Util.getPolyLinesByLayer(pl.getDoc(), roomLayer);
-							 * 
-							 * if (!nonInhabitableRoomHeightMap.isEmpty() ||
-							 * !roomPolyLines.isEmpty()) { boolean isClosed = roomPolyLines.stream()
-							 * .allMatch(dxflwPolyline -> dxflwPolyline.isClosed());
-							 * 
-							 * Room room = new Room(); String[] roomNo = roomLayer.split("_"); if
-							 * (roomNo != null && roomNo.length == 7) { room.setNumber(roomNo[6]); }
-							 * room.setClosed(isClosed);
-							 * 
-							 * List<RoomHeight> roomHeights = new ArrayList<>(); if
-							 * (!roomPolyLines.isEmpty()) { List<Measurement> rooms = new
-							 * ArrayList<Measurement>(); roomPolyLines.stream().forEach(arp -> {
-							 * Measurement m = new MeasurementDetail(arp, true); if
-							 * (!nonInhabitableRoomHeightMap.isEmpty() &&
-							 * nonInhabitableRoomHeightMap.containsKey(m.getColorCode())) { for
-							 * (BigDecimal value :
-							 * nonInhabitableRoomHeightMap.get(m.getColorCode())) { RoomHeight
-							 * roomHeight = new RoomHeight();
-							 * roomHeight.setColorCode(m.getColorCode());
-							 * roomHeight.setHeight(value); roomHeights.add(roomHeight); }
-							 * room.setHeights(roomHeights); } rooms.add(m); });
-							 * 
-							 * // Extract the Mezzanine Area if is declared at non inhabitable room
-							 * level String roomMezzLayerRegExp = String
-							 * .format(layerNames.getLayerName(
-							 * "LAYER_NAME_MEZZANINE_AT_NON_INHABITABLE_ROOM"), block.getNumber(),
-							 * floor.getNumber(), room.getNumber(), "+\\d"); List<String>
-							 * roomMezzLayers = Util.getLayerNamesLike(pl.getDoc(),
-							 * roomMezzLayerRegExp); if (!roomMezzLayers.isEmpty()) { for (String
-							 * layerName : roomMezzLayers) { List<Occupancy> roomMezzanines = new
-							 * ArrayList<>(); String[] array = layerName.split("_"); String
-							 * mezzanineNo = array[8]; List<DXFLWPolyline> mezzaninePolyLines =
-							 * Util.getPolyLinesByLayer(pl.getDoc(), layerName); if
-							 * (!mezzaninePolyLines.isEmpty()) for (DXFLWPolyline polyline :
-							 * mezzaninePolyLines) { OccupancyDetail occupancy = new
-							 * OccupancyDetail(); occupancy.setColorCode(polyline.getColor());
-							 * occupancy.setMezzanineNumber(mezzanineNo);
-							 * occupancy.setIsMezzanine(true);
-							 * occupancy.setBuiltUpArea(Util.getPolyLineArea(polyline));
-							 * occupancy.setTypeHelper(Util.findOccupancyType(polyline, pl));
-							 * List<BigDecimal> heights = Util.getListOfDimensionValueByLayer(pl,
-							 * layerName); if (!heights.isEmpty())
-							 * occupancy.setHeight(Collections.max(heights));
-							 * roomMezzanines.add(occupancy); }
-							 * room.setMezzanineAreas(roomMezzanines); } }
-							 * 
-							 * room.setRooms(rooms); } floor.addNonInhabitationalRooms(room); }
-							 * 
-							 * }
-							 * 
-							 * }
-							 */
-  
+                    for (Object dxfEntity : dimensionList) {
+                        DXFDimension dimension = (DXFDimension) dxfEntity;
+                        List<BigDecimal> values = new ArrayList<>();
+                        Util.extractDimensionValue(pl, values, dimension, windowLayer);
+                        LOG.debug("Extracted dimension values: {}", values);
 
-  
-	// Code Added by Neha for Doors extract
-	/*
-	 * String doorLayerName =
-	 * String.format(layerNames.getLayerName("LAYER_NAME_DOOR"), block.getNumber(),
-	 * floor.getNumber(), "+\\d");
-	 * 
-	 * List<String> doorLayers = Util.getLayerNamesLike(pl.getDoc(), doorLayerName);
-	 * 
-	 * if (!doorLayers.isEmpty()) {
-	 * 
-	 * for (String doorLayer : doorLayers) { String doorHeight =
-	 * Util.getMtextByLayerName(pl.getDoc(), doorLayer);
-	 * 
-	 * // List<DXFLWPolyline> doorPolyLines = Util.getPolyLinesByLayer(pl.getDoc(),
-	 * // doorLayer);
-	 * 
-	 * // BigDecimal doorWidth=BigDecimal.ZERO;
-	 * 
-	 * List<DXFDimension> dimensionList = Util.getDimensionsByLayer(pl.getDoc(),
-	 * doorLayer); if (dimensionList != null && !dimensionList.isEmpty()) { Door
-	 * door = new Door(); BigDecimal doorHeight1 = doorHeight != null ? BigDecimal
-	 * .valueOf(Double.valueOf(doorHeight.replaceAll("DOOR_HT_M=", ""))) :
-	 * BigDecimal.ZERO; door.setDoorHeight(doorHeight1); for (Object dxfEntity :
-	 * dimensionList) { DXFDimension dimension = (DXFDimension) dxfEntity;
-	 * List<BigDecimal> values = new ArrayList<>(); Util.extractDimensionValue(pl,
-	 * values, dimension, doorLayer);
-	 * 
-	 * if (!values.isEmpty()) { for (BigDecimal minDis : values) { //
-	 * doorWidth=minDis; door.setDoorWidth(minDis); } } else {
-	 * door.setDoorWidth(BigDecimal.ZERO); } } floor.addDoor(door); } // else { //
-	 * door.setDoorWidth(BigDecimal.ZERO); // }
-	 * 
-	 * } }
-	 */
-    
-	// Code Added by Neha for non-habitational Doors extract
+                        if (!values.isEmpty()) {
+                            for (BigDecimal minDis : values) {
+                                window.setWindowWidth(minDis);
+                                LOG.debug("Set window width to [{}]", minDis);
+                            }
+                        } else {
+                            window.setWindowWidth(BigDecimal.ZERO);
+                            LOG.debug("No dimension values found; setting window width to 0");
+                        }
+                    }
 
-	/*
-	 * String nonHabitationaldoorLayer =
-	 * String.format(layerNames.getLayerName("LAYER_NAME_NON_HABITATIONAL_DOOR"),
-	 * block.getNumber(), floor.getNumber(), "+\\d");
-	 * 
-	 * List<String> nonHabitationaldoorLayers = Util.getLayerNamesLike(pl.getDoc(),
-	 * nonHabitationaldoorLayer);
-	 * 
-	 * if (!nonHabitationaldoorLayers.isEmpty()) {
-	 * 
-	 * for (String doorLayer : nonHabitationaldoorLayers) { String doorHeight =
-	 * Util.getMtextByLayerName(pl.getDoc(), doorLayer);
-	 * 
-	 * // List<DXFLWPolyline> doorPolyLines = Util.getPolyLinesByLayer(pl.getDoc(),
-	 * // doorLayer);
-	 * 
-	 * // BigDecimal doorWidth=BigDecimal.ZERO;
-	 * 
-	 * List<DXFDimension> dimensionList = Util.getDimensionsByLayer(pl.getDoc(),
-	 * doorLayer); if (dimensionList != null && !dimensionList.isEmpty()) { Door
-	 * door = new Door(); BigDecimal doorHeight1 = doorHeight != null ? BigDecimal
-	 * .valueOf(Double.valueOf(doorHeight.replaceAll("DOOR_HT_M=", ""))) :
-	 * BigDecimal.ZERO; door.setNonHabitationDoorHeight(doorHeight1); for (Object
-	 * dxfEntity : dimensionList) { DXFDimension dimension = (DXFDimension)
-	 * dxfEntity; List<BigDecimal> values = new ArrayList<>();
-	 * Util.extractDimensionValue(pl, values, dimension, doorLayer);
-	 * 
-	 * if (!values.isEmpty()) { for (BigDecimal minDis : values) { //
-	 * doorWidth=minDis; door.setNonHabitationDoorWidth(minDis); } } else {
-	 * door.setNonHabitationDoorWidth(BigDecimal.ZERO); } }
-	 * floor.addNonaHabitationalDoors(door); } // else { //
-	 * door.setDoorWidth(BigDecimal.ZERO); // }
-	 * 
-	 * } }
-	 */
+                    unit.addWindow(window);
+                    LOG.debug("Added window to Unit [{}]", unit.getUnitNumber());
+                }
+            }
+        } else {
+            LOG.debug("No window layers found for Unit [{}]", unit.getUnitNumber());
+        }
 
-
-	// Code Added by Neha for roomwise doors extract
-	/*
-	 * for (Room room : floor.getRegularRooms()) {
-	 * 
-	 * String roomDoorLayerName =
-	 * String.format(layerNames.getLayerName("LAYER_NAME_REGULAR_ROOM_DOOR"),
-	 * block.getNumber(), floor.getNumber(), room.getNumber(), "+\\d");
-	 * 
-	 * List<String> roomDoorLayers = Util.getLayerNamesLike(pl.getDoc(),
-	 * roomDoorLayerName);
-	 * 
-	 * if (!roomDoorLayers.isEmpty()) {
-	 * 
-	 * for (String doorLayer : roomDoorLayers) { String doorHeight =
-	 * Util.getMtextByLayerName(pl.getDoc(), doorLayer);
-	 * 
-	 * // List<DXFLWPolyline> doorPolyLines = Util.getPolyLinesByLayer(pl.getDoc(),
-	 * // doorLayer);
-	 * 
-	 * // BigDecimal doorWidth=BigDecimal.ZERO;
-	 * 
-	 * List<DXFDimension> dimensionList = Util.getDimensionsByLayer(pl.getDoc(),
-	 * doorLayer); if (dimensionList != null && !dimensionList.isEmpty()) { Door
-	 * door = new Door(); BigDecimal doorHeight1 = doorHeight != null ?
-	 * BigDecimal.valueOf( Double.valueOf(doorHeight.replaceAll("DOOR_HT_M=", "")))
-	 * : BigDecimal.ZERO; door.setDoorHeight(doorHeight1); for (Object dxfEntity :
-	 * dimensionList) { DXFDimension dimension = (DXFDimension) dxfEntity;
-	 * List<BigDecimal> values = new ArrayList<>(); Util.extractDimensionValue(pl,
-	 * values, dimension, doorLayer);
-	 * 
-	 * if (!values.isEmpty()) { for (BigDecimal minDis : values) { //
-	 * doorWidth=minDis; door.setDoorWidth(minDis); } } else {
-	 * door.setDoorWidth(BigDecimal.ZERO); } } room.addDoors(door); } // else { //
-	 * window.setWindowWidth(BigDecimal.ZERO); // }
-	 * 
-	 * } } }
-	 */
-    
-	/*
-	 * // Code Added by Neha for roomwise windows extract for (Room room :
-	 * floor.getRegularRooms()) {
-	 * 
-	 * String windowLayerName =
-	 * String.format(layerNames.getLayerName("LAYER_NAME_REGULAR_ROOM_WINDOW"),
-	 * block.getNumber(), floor.getNumber(), room.getNumber(), "+\\d");
-	 * 
-	 * List<String> windowLayers = Util.getLayerNamesLike(pl.getDoc(),
-	 * windowLayerName);
-	 * 
-	 * if (!windowLayers.isEmpty()) {
-	 * 
-	 * for (String windowLayer : windowLayers) { String windowHeight =
-	 * Util.getMtextByLayerName(pl.getDoc(), windowLayer);
-	 * 
-	 * // List<DXFLWPolyline> doorPolyLines = Util.getPolyLinesByLayer(pl.getDoc(),
-	 * // doorLayer);
-	 * 
-	 * // BigDecimal doorWidth=BigDecimal.ZERO;
-	 * 
-	 * List<DXFDimension> dimensionList = Util.getDimensionsByLayer(pl.getDoc(),
-	 * windowLayer); if (dimensionList != null && !dimensionList.isEmpty()) { Window
-	 * window = new Window(); BigDecimal windowHeight1 = windowHeight != null ?
-	 * BigDecimal.valueOf( Double.valueOf(windowHeight.replaceAll("WINDOW_HT_M=",
-	 * ""))) : BigDecimal.ZERO; window.setWindowHeight(windowHeight1); for (Object
-	 * dxfEntity : dimensionList) { DXFDimension dimension = (DXFDimension)
-	 * dxfEntity; List<BigDecimal> values = new ArrayList<>();
-	 * Util.extractDimensionValue(pl, values, dimension, windowLayer);
-	 * 
-	 * if (!values.isEmpty()) { for (BigDecimal minDis : values) { //
-	 * doorWidth=minDis; window.setWindowWidth(minDis); } } else {
-	 * window.setWindowWidth(BigDecimal.ZERO); } } room.addWindow(window); } // else
-	 * { // window.setWindowWidth(BigDecimal.ZERO); // }
-	 * 
-	 * } } }
-	 */
-	
+        LOG.debug("Completed window extraction for Unit Level - Block [{}], Floor [{}], Unit [{}]", 
+                  block.getNumber(), floor.getNumber(), unit.getUnitNumber());
+    }
 
 
     @Override

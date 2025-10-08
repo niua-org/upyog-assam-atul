@@ -602,8 +602,12 @@ public class RampService_Assam extends RampService {
                     BigDecimal length = m.getLength();
                     BigDecimal width  = m.getWidth();
 
-                    String providedLength = (length != null) ? length.toString() : NOT_DEFINED;
-                    String providedWidth  = (width  != null) ? width.toString()  : NOT_DEFINED;
+                    String providedLength = (length != null) 
+                            ? String.format("%.2f", length) 
+                            : NOT_DEFINED;
+                    String providedWidth = (width != null) 
+                            ? String.format("%.2f", width) 
+                            : NOT_DEFINED;
 
                     LOGGER.info("Ramp Measurement → Length: {}, Width: {}", providedLength, providedWidth);
 

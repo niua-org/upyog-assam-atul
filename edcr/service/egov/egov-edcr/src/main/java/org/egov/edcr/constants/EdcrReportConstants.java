@@ -565,8 +565,8 @@ public class EdcrReportConstants {
     public static final String SUBRULE_50_C_4_B_DESCRIPTION = "Maximum slope of ramp %s";
     public static final String SUBRULE_50_C_4_B_SLOPE_DESCRIPTION = "Maximum Slope of DA Ramp %s";
     public static final String SUBRULE_50_C_4_B_SLOPE_MAN_DESC = "Slope of DA Ramp";
-    public static final String RULE_RAMP_LENGTH = "RAMP_LENGTH_RULE";
-    public static final String RULE_RAMP_WIDTH  = "RAMP_WIDTH_RULE";
+    public static final String RULE_RAMP_LENGTH = "50-c-4-b";
+    public static final String RULE_RAMP_WIDTH  = "50-c-4-b";
 
     public static final String DESC_RAMP_LENGTH = "Ramp length shall not exceed 9.0 m between landings";
     public static final String DESC_RAMP_WIDTH  = "Ramp width shall be minimum 1.5 m with handrails on either side";
