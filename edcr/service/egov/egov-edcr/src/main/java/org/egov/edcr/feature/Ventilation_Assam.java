@@ -55,18 +55,14 @@ import static org.egov.edcr.constants.CommonFeatureConstants.OF_CARPET_AREA;
 import static org.egov.edcr.constants.CommonFeatureConstants.TH_OF_FLOOR_AREA;
 import static org.egov.edcr.constants.CommonFeatureConstants.VENTILATION_AREA;
 import static org.egov.edcr.constants.EdcrReportConstants.AREA_UNIT_SQM;
-import static org.egov.edcr.constants.EdcrReportConstants.COMMON_ROOM_VENTILATION_DEFINED_PERCENT_MSG;
 import static org.egov.edcr.constants.EdcrReportConstants.COMMON_ROOM_VENTILATION_OPENING_DESC_PREFIX;
-import static org.egov.edcr.constants.EdcrReportConstants.LAUNDRY_VENTILATION_DESC;
+import static org.egov.edcr.constants.EdcrReportConstants.LAUNDRY_VENTILATION_OPENING_DESC_PREFIX;
 import static org.egov.edcr.constants.EdcrReportConstants.LIGHT_VENTILATION_DESCRIPTION;
 import static org.egov.edcr.constants.EdcrReportConstants.PARENTHESIS_END;
 import static org.egov.edcr.constants.EdcrReportConstants.PARENTHESIS_START;
 import static org.egov.edcr.constants.EdcrReportConstants.PERCENTAGE_SUFFIX;
 import static org.egov.edcr.constants.EdcrReportConstants.RULE_43;
 import static org.egov.edcr.constants.EdcrReportConstants.RULE_VENT_01;
-import static org.egov.edcr.constants.EdcrReportConstants.VENTILATION_DEFINED_PERCENT_MSG;
-import static org.egov.edcr.constants.EdcrReportConstants.VENTILATION_NOT_PROVIDED_AT_FLOOR;
-import static org.egov.edcr.constants.EdcrReportConstants.LAUNDRY_VENTILATION_OPENING_DESC_PREFIX;
 import static org.egov.edcr.service.FeatureUtil.addScrutinyDetailtoPlan;
 import static org.egov.edcr.service.FeatureUtil.mapReportDetails;
 
@@ -79,17 +75,7 @@ import java.util.Optional;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.egov.common.entity.edcr.Block;
-import org.egov.common.entity.edcr.FeatureEnum;
-import org.egov.common.entity.edcr.Floor;
-import org.egov.common.entity.edcr.Measurement;
-import org.egov.common.entity.edcr.MeasurementWithHeight;
-import org.egov.common.entity.edcr.Occupancy;
-import org.egov.common.entity.edcr.Plan;
-import org.egov.common.entity.edcr.ReportScrutinyDetail;
-import org.egov.common.entity.edcr.Result;
-import org.egov.common.entity.edcr.ScrutinyDetail;
-import org.egov.common.entity.edcr.VentilationRequirement;
+import org.egov.common.entity.edcr.*;
 import org.egov.edcr.service.MDMSCacheManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -131,10 +117,12 @@ public class Ventilation_Assam extends Ventilation {
 
 	        if (b.getBuilding() != null && b.getBuilding().getFloors() != null) {
 	            for (Floor f : b.getBuilding().getFloors()) {
-	                processGeneralVentilation(f, ventilationValues[0], generalScrutiny, pl);
-	                processLaundryRecreationVentilation(f, bathScrutiny, pl);
-	                processCommonRoomVentilation(f, bathScrutiny, pl);
-	              
+                    if(f.getUnits() != null && !f.getUnits().isEmpty())
+                        for(FloorUnit floorUnit : f.getUnits()) {
+                            processGeneralVentilation(f, floorUnit, ventilationValues[0], generalScrutiny, pl);
+                            processLaundryRecreationVentilation(f, floorUnit, bathScrutiny, pl);
+                            processCommonRoomVentilation(f, floorUnit, bathScrutiny, pl);
+                        }
 	            }
 	        }
 	        
@@ -197,16 +185,16 @@ public class Ventilation_Assam extends Ventilation {
 	 * @param scrutinyDetail The scrutiny detail object to add results to
 	 * @param pl The building plan for adding scrutiny details to report
 	 */
-	private void processGeneralVentilation(Floor floor, BigDecimal ventilationRatio,
+	private void processGeneralVentilation(Floor floor, FloorUnit floorUnit, BigDecimal ventilationRatio,
 	                                       ScrutinyDetail scrutinyDetail, Plan pl) {
-	    if (floor.getLightAndVentilation() != null &&
-	        floor.getLightAndVentilation().getMeasurements() != null &&
-	        !floor.getLightAndVentilation().getMeasurements().isEmpty()) {
+	    if (floorUnit.getLightAndVentilation() != null &&
+	        floorUnit.getLightAndVentilation().getMeasurements() != null &&
+	        !floorUnit.getLightAndVentilation().getMeasurements().isEmpty()) {
 
-	        BigDecimal totalVentilationArea = floor.getLightAndVentilation().getMeasurements().stream()
+	        BigDecimal totalVentilationArea = floorUnit.getLightAndVentilation().getMeasurements().stream()
 	            .map(Measurement::getArea).reduce(BigDecimal.ZERO, BigDecimal::add);
 
-	        BigDecimal totalCarpetArea = floor.getOccupancies().stream()
+	        BigDecimal totalCarpetArea = floorUnit.getOccupancies().stream()
 	            .map(Occupancy::getCarpetArea).reduce(BigDecimal.ZERO, BigDecimal::add);
 
 	        if (totalVentilationArea.compareTo(BigDecimal.ZERO) > 0) {
@@ -226,8 +214,8 @@ public class Ventilation_Assam extends Ventilation {
 	}
 
 
-	private void processLaundryRecreationVentilation(Floor floor, ScrutinyDetail scrutinyDetail, Plan pl) {
-	    MeasurementWithHeight laundryVent = floor.getLaundryOrRecreationalVentilation();
+	private void processLaundryRecreationVentilation(Floor floor, FloorUnit floorUnit, ScrutinyDetail scrutinyDetail, Plan pl) {
+	    MeasurementWithHeight laundryVent = floorUnit.getLaundryOrRecreationalVentilation();
 
 	    // If not provided in DXF, skip adding to report
 	    if (laundryVent == null || laundryVent.getMeasurements() == null || laundryVent.getMeasurements().isEmpty()) {
@@ -246,7 +234,7 @@ public class Ventilation_Assam extends Ventilation {
 	        ventilationPercent = matchedRule.get().getLaundryRecreationPercent();
 	    }
 
-	    BigDecimal roomArea = floor.getArea();
+	    BigDecimal roomArea = floorUnit.getArea();
 	    BigDecimal requiredVentArea = roomArea.multiply(ventilationPercent);
 	    BigDecimal providedVentArea = laundryVent.getMeasurements().stream()
 	        .map(Measurement::getArea)
@@ -266,14 +254,14 @@ public class Ventilation_Assam extends Ventilation {
 	}
 
 	
-	private void processCommonRoomVentilation(Floor floor, ScrutinyDetail scrutinyDetail, Plan pl) {
-	    if (floor.getCommonRoom() == null || floor.getCommonRoom().getCommonRoomVentialtion() == null
-	            || floor.getCommonRoom().getCommonRoomVentialtion().isEmpty()) {
+	private void processCommonRoomVentilation(Floor floor, FloorUnit floorUnit, ScrutinyDetail scrutinyDetail, Plan pl) {
+	    if (floorUnit.getCommonRoom() == null || floorUnit.getCommonRoom().getCommonRoomVentialtion() == null
+	            || floorUnit.getCommonRoom().getCommonRoomVentialtion().isEmpty()) {
 	        // Skip if not provided in DXF
 	        return;
 	    }
 
-	    List<Measurement> roomVent = floor.getCommonRoom().getCommonRoomVentialtion();
+	    List<Measurement> roomVent = floorUnit.getCommonRoom().getCommonRoomVentialtion();
 	    BigDecimal ventilationPercent = BigDecimal.ZERO;
 
 	    List<Object> rules = cache.getFeatureRules(pl, FeatureEnum.VENTILATION.getValue(), false);
@@ -286,7 +274,7 @@ public class Ventilation_Assam extends Ventilation {
 	        ventilationPercent = matchedRule.get().getCommonRoomPercent();
 	    }
 
-	    List<Measurement> commonRoomMeasurements = floor.getCommonRoom().getRooms();
+	    List<Measurement> commonRoomMeasurements = floorUnit.getCommonRoom().getRooms();
 	    BigDecimal roomArea = commonRoomMeasurements.stream()
 	            .map(Measurement::getArea)
 	            .reduce(BigDecimal.ZERO, BigDecimal::add);

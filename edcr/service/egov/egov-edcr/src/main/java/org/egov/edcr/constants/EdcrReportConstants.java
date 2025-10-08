@@ -337,7 +337,7 @@ public class EdcrReportConstants {
     public static final BigDecimal MAXIMUM_AREA_46_45 = BigDecimal.valueOf(46.45);
     public static final BigDecimal VENTILATION_PERCENTAGE = BigDecimal.valueOf(20); // 20% ventilation requirement
     public static final String ROOM_HEIGHT_NOTDEFINED = "Room height is not defined in layer ";
-    public static final String LAYER_ROOM_HEIGHT = "BLK_%s_FLR_%s_%s";
+    public static final String LAYER_ROOM_HEIGHT = "BLK_%s_FLR_%s_UNIT_%s_%s";
 
     public static final BigDecimal MIN_WINDOW_HEIGHT = BigDecimal.valueOf(0.50);
     public static final BigDecimal MIN_DOOR_HEIGHT = BigDecimal.valueOf(2.0);
@@ -374,6 +374,7 @@ public class EdcrReportConstants {
     public static final String SUBRULE_41_III_AREA_DESC = "Total area of %s";
     public static final String SUBRULE_41_III_TOTAL_WIDTH = "Minimum Width of %s";
     public static final BigDecimal MINIMUM_AREA_4_5 = BigDecimal.valueOf(4.5);
+    public static final BigDecimal CARPETAREA_THRESHHOLD = BigDecimal.valueOf(66);
     public static final BigDecimal MINIMUM_AREA_5 = BigDecimal.valueOf(5);
     public static final BigDecimal MINIMUM_WIDTH_1_8 = BigDecimal.valueOf(1.8);
     public static final String KITCHEN = "kitchen";
@@ -564,8 +565,8 @@ public class EdcrReportConstants {
     public static final String SUBRULE_50_C_4_B_DESCRIPTION = "Maximum slope of ramp %s";
     public static final String SUBRULE_50_C_4_B_SLOPE_DESCRIPTION = "Maximum Slope of DA Ramp %s";
     public static final String SUBRULE_50_C_4_B_SLOPE_MAN_DESC = "Slope of DA Ramp";
-    public static final String RULE_RAMP_LENGTH = "RAMP_LENGTH_RULE";
-    public static final String RULE_RAMP_WIDTH  = "RAMP_WIDTH_RULE";
+    public static final String RULE_RAMP_LENGTH = "50-c-4-b";
+    public static final String RULE_RAMP_WIDTH  = "50-c-4-b";
 
     public static final String DESC_RAMP_LENGTH = "Ramp length shall not exceed 9.0 m between landings";
     public static final String DESC_RAMP_WIDTH  = "Ramp width shall be minimum 1.5 m with handrails on either side";
@@ -596,6 +597,7 @@ public class EdcrReportConstants {
     public static final String WC_VENTILATION_AREA_UNIT = " sqm";
     public static final String WC_VENTILATION_WIDTH_UNIT = " m";
     public static final String WC_VENTILATION_AT_FLOOR = " at floor ";
+    public static final String WC_VENTILATION_FLOOR_UNIT = "'s FloorUnit ";
  // Rule Numbers
     public static final String RULE_VENT_01 = "Clause 55";
     public static final String SUB_RULE_SIDE_YARD = "83b (ii)";
