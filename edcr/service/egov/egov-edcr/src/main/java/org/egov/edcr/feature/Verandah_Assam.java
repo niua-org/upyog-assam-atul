@@ -70,9 +70,9 @@ import static org.egov.edcr.service.FeatureUtil.addScrutinyDetailtoPlan;
 import static org.egov.edcr.service.FeatureUtil.mapReportDetails;
 
 @Service
-public class Verandah extends FeatureProcess {
+public class Verandah_Assam extends FeatureProcess {
 
-	private static final Logger LOG = LogManager.getLogger(Verandah.class);
+	private static final Logger LOG = LogManager.getLogger(Verandah_Assam.class);
 
 	/**
 	 * Validates the building plan for verandah requirements.
