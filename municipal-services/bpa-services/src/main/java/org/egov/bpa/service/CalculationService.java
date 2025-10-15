@@ -2,17 +2,17 @@ package org.egov.bpa.service;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
-import lombok.extern.slf4j.Slf4j;
 
 import org.egov.bpa.config.BPAConfiguration;
 import org.egov.bpa.repository.ServiceRequestRepository;
-import org.egov.bpa.util.BPAConstants;
+import org.egov.bpa.web.model.BPA;
 import org.egov.bpa.web.model.BPARequest;
 import org.egov.bpa.web.model.CalculationReq;
 import org.egov.bpa.web.model.CalulationCriteria;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -33,15 +33,19 @@ public class CalculationService {
 	 * @param bpaRequest
 	 * @param feeType
 	 */
-	public void addCalculation(BPARequest bpaRequest, String feeType) {
+	public void addCalculation(BPARequest bpaRequest) {
 
 		CalculationReq calulcationRequest = new CalculationReq();
 		calulcationRequest.setRequestInfo(bpaRequest.getRequestInfo());
 		CalulationCriteria calculationCriteria = new CalulationCriteria();
 		calculationCriteria.setApplicationNo(bpaRequest.getBPA().getApplicationNo());
 		calculationCriteria.setBpa(bpaRequest.getBPA());
-		calculationCriteria.setFeeType(feeType);
+		calculationCriteria.setFeeType(bpaRequest.getFeeType());
 		calculationCriteria.setTenantId(bpaRequest.getBPA().getTenantId());
+		calculationCriteria.setBpa(bpaRequest.getBPA());
+		calculationCriteria.setFloorLevel(bpaRequest.getFloorLevel());
+		calculationCriteria.setWallType(bpaRequest.getWallType());
+		calculationCriteria.setApplicationType(bpaRequest.getApplicationType());
 		List<CalulationCriteria> criterias = Arrays.asList(calculationCriteria);
 		calulcationRequest.setCalulationCriteria(criterias);
 		StringBuilder url = new StringBuilder();

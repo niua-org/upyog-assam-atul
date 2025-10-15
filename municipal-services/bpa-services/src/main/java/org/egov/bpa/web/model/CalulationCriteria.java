@@ -27,11 +27,17 @@ public class CalulationCriteria {
 	@Size(min = 2, max = 64)
 	private String applicationNo;
 
+	@JsonProperty("floorLevel")
+	private String floorLevel;
+
+	@JsonProperty("wallType")
+	private String wallType;
+
 	@JsonProperty("tenantId")
 	@NotNull
 	@Size(min = 2, max = 256)
 	private String tenantId;
-	
+
 	@JsonProperty("feeType")
 	@NotNull
 	@Size(min = 2, max = 64)
