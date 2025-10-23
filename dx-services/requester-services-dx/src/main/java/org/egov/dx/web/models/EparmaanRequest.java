@@ -1,5 +1,6 @@
 package org.egov.dx.web.models;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,13 +10,12 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AuthResponse {
+public class EparmaanRequest {
 
+    @JsonProperty("code")
+    private String code;
 
-    private String redirectURL;
-
-    private String dlReqRef;
-
-    private EPramaanData epramaanData;
+    @JsonProperty("authToken")
+    private  String authToken;
 
 }
