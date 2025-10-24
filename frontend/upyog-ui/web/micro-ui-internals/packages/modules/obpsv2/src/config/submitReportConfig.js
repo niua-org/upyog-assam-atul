@@ -4,7 +4,7 @@ export const newConfig = [
         body: [
           {
             type: "component",
-            component: "siteReport",
+            component: "SiteReport",
             key: "Reports",
             withoutLabel: true,
             hideInCitizen: true,

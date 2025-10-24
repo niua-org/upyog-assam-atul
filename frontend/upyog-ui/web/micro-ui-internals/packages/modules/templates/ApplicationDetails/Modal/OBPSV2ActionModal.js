@@ -82,60 +82,24 @@ const ActionModal = ({ t, action, tenantId, state, id, closeModal, submitAction,
     })();
   }, [file]);
 
-  const getInspectionDocs = (docs) => {
-    let refinedDocs = [];
-    docs && docs.map((doc,ind) => {
-      refinedDocs.push({
-        "documentType":(doc.documentType+"_"+doc.documentType.split("_")[1]).replaceAll("_","."),
-        "fileStoreId":doc.fileStoreId,
-        "fileStore":doc.fileStoreId,
-        "fileName":"",
-        "dropDownValues": {
-          "value": (doc.documentType+"_"+doc.documentType.split("_")[1]).replaceAll("_","."),
-      }
-      })
-    })
-    return refinedDocs;
-  }
 
-  const getQuestion = (data) => {
-    let refinedQues = [];
-    var i;
-    for(i=0; i<data?.questionLength; i++)
-    {
-      refinedQues.push({
-        "remarks": data[`Remarks_${i}`],
-        "question": data?.questionList[i].question,
-        "value": data?.[`question_${i}`]?.code,
-      })
-    }
-    return refinedQues;
-  }
+  
 
-  const getfeildInspection = (data) => {
+  const getSubmitReport = (data) => {
     let formdata = [], inspectionOb = [];
-    
-    if (data?.additionalDetails?.fieldinspection_pending?.length > 0) {
-      inspectionOb = data?.additionalDetails?.fieldinspection_pending
-    }
 
-    if(data.status == "FIELDINSPECTION_INPROGRESS") {
-      formdata = JSON.parse(sessionStorage.getItem("INSPECTION_DATA"));
+    if(data.status == "PENDING_GMDA_ENGINEER") {
+      formdata = JSON.parse(sessionStorage.getItem("SUBMIT_REPORT_DATA"));
       formdata?.length > 0 && formdata.map((ob,ind) => {
-        inspectionOb.push({
-          docs: getInspectionDocs(ob.Documents),
-          date: ob.InspectionDate,
-          questions: getQuestion(ob),
-          time: ob?.InspectionTime,
-        })
+        inspectionOb.push(ob)
       })
-      inspectionOb = inspectionOb.filter((ob) => ob.docs && ob.docs.length>0);
+      //inspectionOb = inspectionOb.filter((ob) => ob.docs && ob.docs.length>0);
     } else {
-      sessionStorage.removeItem("INSPECTION_DATA")
+      sessionStorage.removeItem("SUBMIT_REPORT_DATA")
     }
   
-    let fieldinspection_pending = [ ...inspectionOb];
-    return fieldinspection_pending;
+    let submitReportinspection_pending = [ ...inspectionOb];
+    return submitReportinspection_pending;
   }
 
   const getDocuments = (applicationData) => {
@@ -161,7 +125,7 @@ const ActionModal = ({ t, action, tenantId, state, id, closeModal, submitAction,
     applicationData = {
       ...applicationData,
       documents: getDocuments(applicationData),
-      additionalDetails: {...applicationData?.additionalDetails, fieldinspection_pending:getfeildInspection(applicationData), pendingapproval: getPendingApprovals() },
+      additionalDetails: {...applicationData?.additionalDetails, submitReportinspection_pending:getSubmitReport(applicationData), pendingapproval: getPendingApprovals() },
        workflow:{
         action: action?.action,
         comment: data?.comments?.length > 0 ? data?.comments : null,
