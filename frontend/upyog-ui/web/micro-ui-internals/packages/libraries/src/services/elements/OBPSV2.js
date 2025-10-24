@@ -458,6 +458,26 @@ export const OBPSV2Services = {
         }]
       },
     };
+    
+    let reportDetails = null;
+
+if (bpa?.additionalDetails?.submitReportinspection_pending?.length) {
+  const values = bpa.additionalDetails.submitReportinspection_pending.flatMap((report) =>
+    Object.entries(report).map(([key, value]) => ({
+      title: `BPA_${key.toUpperCase()}`,
+      value: value ?? "NA", 
+    }))
+  );
+
+  reportDetails = {
+    title: "BPA_SUBMIT_REPORT_DETAILS",
+    asSectionHeader: true,
+    isInsert: true,
+    isCommon: true,
+    values: values,
+  };
+}
+
     details = [
       ...details,
       applicationDetailsInfo,
@@ -469,7 +489,8 @@ export const OBPSV2Services = {
       adjoiningLandOwners,
       futureProvisions,
       rtpDetails,
-      documentDetails
+      documentDetails,
+      reportDetails
     ];
     let bpaFilterDetails = details?.filter((data) => data);
     let envCitizenName = window.location.href.includes("/employee")

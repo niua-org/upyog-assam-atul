@@ -26,7 +26,7 @@ import BPAApplicationDetails from "./pages/citizen/ApplicationDetails";
 import BPAEmployeeDetails from "./pages/employee/BpaApplicationDetail";
 import OBPSV2Inbox from "./pages/employee/Inbox";
 import OBPSV2EmployeeCard from "./pages/employee/EmployeeCard";
-import siteReport from "./pageComponents/siteReport"
+import SiteReport from "./pageComponents/siteReport"
 import RTASearchApplication from "./components/SearchApplication";
 const OBPSV2Module = ({ stateCode, userType, tenants }) => {
   const moduleCode = "OBPSV2";
@@ -88,7 +88,7 @@ const componentsToRegister = {
   BPAMyApplications,
   AreaMapping,
   RTPForm,
-  siteReport,
+  SiteReport,
   BPAAcknowledgement,
   RTPAcknowledgement,
   BPAEdit : Edit,

@@ -56,6 +56,7 @@ import {
     const { isLoading, isError, error, data, refetch } =Digit.Hooks.obpsv2.useBPASearchApi({
       tenantId,
       filters: { applicationNo: acknowledgementIds },
+      config: { staleTime: Infinity, cacheTime: Infinity }
     });
     const [hasAccess, setHasAccess] = useState(false);
     const { roles } = Digit.UserService.getUser().info;
@@ -175,7 +176,7 @@ import {
     await refetch();
     const updatedWorkflowDetails = await Digit.WorkflowService.getByBusinessId(tenantId, acknowledgementIds);
     setWorkflowDetails(updatedWorkflowDetails);
-    window.location.reload();
+    //window.location.reload();
     setTimeout(() => setToast(false), 10000);
   } catch (err) {
     console.error("Error while assigning:", err);
