@@ -1,5 +1,5 @@
 import { CardSectionHeader, CheckPoint, ConnectingCheckPoints, Loader } from "@upyog/digit-ui-react-components";
-import React, { Fragment } from "react";
+import React, { Fragment, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import WFCaption from "./WFCaption";
 
@@ -8,11 +8,16 @@ const WFApplicationTimeline = (props) => {
   const { t } = useTranslation();
   const businessService = "BPA_GMDA_GMC";
 
-  const { isLoading, data } = Digit.Hooks.useWorkflowDetails({
+  const { isLoading, data, refetch } = Digit.Hooks.useWorkflowDetails({
     tenantId: props.application?.tenantId,
     id: props.application?.applicationNo,
     moduleCode: businessService,
   });
+  useEffect(() => {
+    if (props.application?.status) {
+      refetch();
+    }
+  }, [props.application?.status]);
 
 
   function OpenImage(imageSource, index, thumbnailsToShow) {

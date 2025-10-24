@@ -76,17 +76,8 @@ const siteReport = ({submitReport, onChange}) => {
   const handleChange = (key, value) => {
     const updated = { ...form, [key]: value };
     setForm(updated);
-    const updatedSubmitReport = {
-        ...submitReport,
-        bpa_details: {
-          ...(submitReport?.bpa_details || {}),
-          additionalDetails: {
-            ...(submitReport?.bpa_details?.additionalDetails || {}),
-            ...updated,
-          },
-        },
-      };
-    if (onChange) onChange(updatedSubmitReport);
+    
+        sessionStorage.setItem("SUBMIT_REPORT_DATA", JSON.stringify([updated]));
   };
   
 

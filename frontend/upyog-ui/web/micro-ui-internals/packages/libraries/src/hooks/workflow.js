@@ -5,7 +5,7 @@ const useWorkflowDetails = ({ tenantId, id, moduleCode, role = "CITIZEN", servic
 
   const staleDataConfig = { staleTime: Infinity };
 
-  const { isLoading, error, isError, data } = useQuery(
+  const { isLoading, error, isError, data, refetch } = useQuery(
     ["workFlowDetails", tenantId, id, moduleCode, role, config],
     () => Digit.WorkflowService.getDetailsById({ tenantId, id, moduleCode, role, getTripData }),
     getStaleData ? { ...staleDataConfig, ...config } : config
@@ -13,7 +13,7 @@ const useWorkflowDetails = ({ tenantId, id, moduleCode, role = "CITIZEN", servic
 
   if (getStaleData) return { isLoading, error, isError, data };
 
-  return { isLoading, error, isError, data, revalidate: () => queryClient.invalidateQueries(["workFlowDetails", tenantId, id, moduleCode, role]) };
+  return { isLoading, error, isError, data, refetch, revalidate: () => queryClient.invalidateQueries(["workFlowDetails", tenantId, id, moduleCode, role]) };
 };
 
 export default useWorkflowDetails;
