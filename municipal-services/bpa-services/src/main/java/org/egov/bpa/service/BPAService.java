@@ -459,8 +459,8 @@ public class BPAService {
      //   String applicationType = edcrResponse.get(BPAConstants.APPLICATIONTYPE);
      //   log.debug("applicationType is " + applicationType);
 
-//        BusinessService businessService = workflowService.getBusinessService(bpa, bpaRequest.getRequestInfo(),
-//                bpa.getApplicationNo());
+        BusinessService businessService = workflowService.getBusinessService(bpa, bpaRequest.getRequestInfo(),
+                bpa.getApplicationNo());
 		List<Floor> floors = new ArrayList<>();
 //				edcrService.getFloorsFromEDCRDetails(bpaRequest.getRequestInfo(), bpaRequest.getBPA());
 
@@ -514,7 +514,7 @@ public class BPAService {
 			break;
 
 		default:
-//			enrichmentService.enrichBPAUpdateRequest(bpaRequest, businessService);
+			enrichmentService.enrichBPAUpdateRequest(bpaRequest, businessService);
 			wfIntegrator.callWorkFlow(bpaRequest);
 			repository.update(bpaRequest, BPAConstants.UPDATE);
 			break;
