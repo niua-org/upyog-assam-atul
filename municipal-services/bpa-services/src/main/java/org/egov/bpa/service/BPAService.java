@@ -517,10 +517,10 @@ public class BPAService {
 			break;
 		}
 
-		if("PENDING_CHAIRMAN_PRESIDENT_MB".equalsIgnoreCase(bpaRequest.getBPA().getStatus())) {
-			addCalculation(bpaRequest, "BUILDING_PERMIT_FEE");			
-		}
-
+        if ("PENDING_CHAIRMAN_PRESIDENT_MB".equalsIgnoreCase(bpaRequest.getBPA().getStatus())
+                || "PENDING_CHAIRMAN_PRESIDENT_GP".equalsIgnoreCase(bpaRequest.getBPA().getStatus())) {
+            addCalculation(bpaRequest, "BUILDING_PERMIT_FEE");
+        }
 		return bpaRequest.getBPA();
 
       //  Map<String, String> additionalDetails = bpa.getAdditionalDetails() != null ? (Map<String, String>) bpa.getAdditionalDetails()
