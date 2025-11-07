@@ -348,8 +348,6 @@ export const OBPSV2Services = {
       appBusinessService = ["BPA.PLANNING_PERMIT_FEE"];
     } else if (bpa?.status === "CITIZEN_FINAL_PAYMENT") {
       appBusinessService = ["BPA.BUILDING_PERMIT_FEE"];
-    } else {
-      appBusinessService = ["BPA.PLANNING_PERMIT_FEE"];
     }
     let fetchBillRes = {};
 
