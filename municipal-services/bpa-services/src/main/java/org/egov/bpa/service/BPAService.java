@@ -511,6 +511,9 @@ public class BPAService {
 		case "SUBMIT_REPORT":
 			Object mdmsData = util.mDMSCall(requestInfo, tenantId);
 	        nocService.createNocRequest(bpaRequest, mdmsData);
+            enrichmentService.enrichBPAUpdateRequest(bpaRequest, businessService);
+            wfIntegrator.callWorkFlow(bpaRequest);
+            repository.update(bpaRequest, BPAConstants.UPDATE);
 			break;
 
 		default:
