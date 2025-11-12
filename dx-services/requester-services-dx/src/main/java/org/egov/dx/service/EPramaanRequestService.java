@@ -108,14 +108,16 @@ public class EPramaanRequestService {
         validateConfig("epramaan.responseType", responseTypeConfig);
         validateConfig("epramaan.codeChallengeMethod", codeChallengeMethodConfig);
 
+//        TODO : Remove this log after testing
         log.info("Preparing ePramaan authorization request. authGrantRequestUri={}, clientIdHash={}, redirectUri={}, scope={}, responseType={}, codeChallengeMethod={}",
-                authGrantRequestUri, hashValue(clientId), redirectUri, scopeConfig, responseTypeConfig, codeChallengeMethodConfig);
+                authGrantRequestUri, clientId, redirectUri, scopeConfig, responseTypeConfig, codeChallengeMethodConfig);
 
         //1. save codeVerifier, stateID, nonce in db
         State stateID = new State(UUID.randomUUID().toString());
         Nonce nonce = new Nonce();
         CodeVerifier codeVerifier = new CodeVerifier();
 
+//        TODO : Remove this log after testing
         log.debug("Generated PKCE parameters. state={}, nonce={}, codeVerifier={}", stateID.getValue(), nonce.getValue(), codeVerifier.getValue());
 
         Scope scope = new Scope();
@@ -134,7 +136,9 @@ public class EPramaanRequestService {
         String inputValue = clientId + configurations.getEpAesKey() + stateID + nonce + redirectUri
                 + scopeConfig + authenticationRequest.getCodeChallenge();
         String apiHmac = hashHMACHex(inputValue, configurations.getEpAesKey());
-        log.debug("Computed apiHmac for state {}: {}", stateID.getValue(), mask(apiHmac));
+
+//        TODO : Remove this log after testing
+        log.debug("Computed apiHmac for state {}: {}", stateID.getValue(), apiHmac);
         String finalUrl = authenticationRequest.toURI().toString() + "&apiHmac=" + apiHmac;
         //return finalUrl;
         UriComponents uriComponents = UriComponentsBuilder
@@ -212,21 +216,6 @@ public class EPramaanRequestService {
             log.error("Missing or empty configuration value for {}", propertyName);
             throw new IllegalArgumentException("Configuration property " + propertyName + " must not be null or empty");
         }
-    }
-
-    private String hashValue(String value) {
-        if (value == null) {
-            return "null";
-        }
-        return Integer.toHexString(value.hashCode());
-    }
-
-    private String mask(String value) {
-        if (value == null) {
-            return "null";
-        }
-        int visibleChars = Math.min(4, value.length());
-        return value.substring(0, visibleChars) + "****";
     }
 
     private static String hashHMACHex(String inputValue, String hMACKey) throws Exception {
