@@ -469,6 +469,10 @@ public class NotificationUtil {
 			message = message.replace(WEBSITE_LINK_PLACEHOLDER, NIUA_LINK);
 		}
 
+		if (message.contains("{PAYMENT_LINK}")) {
+			message = message.replace("{PAYMENT_LINK}", NIUA_LINK);
+		}
+
 		return message;
 	}
 
@@ -651,7 +655,7 @@ public class NotificationUtil {
 		List<String> messageCode = new ArrayList<>();
 		StringBuilder status_action = new StringBuilder();
 		status_action.append(status.toUpperCase()).append("_").append(action.toUpperCase());
-
+		log.info("Fetching message template for status_action : "+status_action);
 		switch (status_action.toString()) {
 
 		case "PENDING_RTP_APPROVAL_APPLY":
@@ -695,6 +699,10 @@ public class NotificationUtil {
 			messageCode.add(BPAConstants.POST_PAYMENT_PLANNING_PERMIT);
 			break;
 
+		case "FORWARDED_TO_TECHNICAL_ENGINEER_MB_PAY":
+			messageCode.add(BPAConstants.POST_PAYMENT_PLANNING_PERMIT);
+			break;
+
 		case "FORWARDED_TO_DD_AD_TCP_FORWARD":
 			messageCode.add(BPAConstants.TECHNICAL_VERIFICATION);
 			break;
@@ -704,6 +712,10 @@ public class NotificationUtil {
 //			break;
 
 		case "PENDING_CHAIRMAN_PRESIDENT_GP_FORWARD":
+			messageCode.add(BPAConstants.DD_AD_RECOMMENDED);
+			break;
+
+		case "PENDING_CHAIRMAN_PRESIDENT_MB_FORWARD":
 			messageCode.add(BPAConstants.DD_AD_RECOMMENDED);
 			break;
 

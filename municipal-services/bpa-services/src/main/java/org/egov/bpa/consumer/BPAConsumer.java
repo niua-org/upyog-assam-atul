@@ -26,6 +26,7 @@ public class BPAConsumer {
 	private BPANotificationService notificationService;
 	
 	@KafkaListener(topics = { "${persister.update.buildingplan.topic}",
+			"${persister.update.allbuildingplan.topic}",
 //			"${persister.update.buildingplan.workflow.topic}", 
 			"${persister.save.buildingplan.topic}" })
 	public void listen(final HashMap<String, Object> record, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
