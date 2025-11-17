@@ -1,3 +1,4 @@
+import { de } from "date-fns/locale";
 import Urls from "../../atoms/urls";
 import { Request, ServiceRequest } from "../../atoms/Utils/Request";
 import { Storage } from "../../atoms/Utils/Storage";
@@ -41,17 +42,25 @@ export const UserService = {
         });
 
         if (formDataResponse) {
-          // Step 2: Call UPYOG logout WITHOUT waiting or handling response
-          // Fire and forget - don't await
+      // Step 2: Wait for logout to complete (with timeout)
+      try {
+        await Promise.race([
           ServiceRequest({
             serviceName: "logoutUser",
             url: Urls.UserLogout,
             data: { access_token: user?.access_token },
             auth: true,
             params: { tenantId },
-          }).catch(err => console.error("Logout error:", err));
-
-          // Step 3: Immediately submit form (don't wait for logout to complete)
+          }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Logout timeout')), 3000)
+          )
+        ]);
+        } catch (logoutError) {
+          console.error("Logout error (continuing with ePramaan):", logoutError);
+          // Continue anyway - we'll clear session on redirect back
+        }
+          // Step 3: Now submit form after logout attempt
           const form = document.createElement("form");
           form.method = "POST";
           form.action = Urls.ePramaan.logoutUrl;
@@ -97,28 +106,6 @@ export const UserService = {
     return Digit.SessionStorage.get("User");
   },
 
-  //TODO: Remove old logout code after testing
-  // logout: async () => {
-  //   const userType = UserService.getType();
-  //   let ePramaanInitiated = false;
-  //   try {
-  //     const result = await UserService.logoutUser();
-  //     ePramaanInitiated = result?.ePramaanInitiated;
-  //   } catch (e) {
-  //   }
-    
-  //   // Only clear storage and redirect if ePramaan form submission did not happen
-  //   // (ePramaan form submission causes redirect to ePramaan, then back to redirectUrl)
-  //   if (!ePramaanInitiated) {
-  //     window.localStorage.clear();
-  //     window.sessionStorage.clear();
-  //     if (userType === "citizen") {
-  //       window.location.replace("/upyog-ui/citizen");
-  //     } else {
-  //       window.location.replace("/upyog-ui/employee/user/language-selection");
-  //     }
-  //   }
-  // },
 
   logout: async () => {
   console.log("[Logout] logout() invoked.");
