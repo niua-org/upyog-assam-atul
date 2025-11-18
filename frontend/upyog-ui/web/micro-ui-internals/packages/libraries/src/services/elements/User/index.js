@@ -1,7 +1,9 @@
-import { de } from "date-fns/locale";
+import React from "react";
+import ReactDOM from "react-dom";
 import Urls from "../../atoms/urls";
 import { Request, ServiceRequest } from "../../atoms/Utils/Request";
 import { Storage } from "../../atoms/Utils/Storage";
+import EPramaanLogoutLoader from "./EPramaanLogoutLoader";
 
 export const UserService = {
   authenticate: (details) => {
@@ -42,7 +44,7 @@ export const UserService = {
         });
 
         if (formDataResponse) {
-      // Step 2: Wait for logout to complete (with timeout)
+      // Step 2: COMPLETE UPYOG logout first (wait for it)
       try {
         await Promise.race([
           ServiceRequest({
@@ -58,9 +60,15 @@ export const UserService = {
         ]);
         } catch (logoutError) {
           console.error("Logout error (continuing with ePramaan):", logoutError);
-          // Continue anyway - we'll clear session on redirect back
         }
-          // Step 3: Now submit form after logout attempt
+          // Step 3: Clear UPYOG session storage NOW (before ePramaan redirect)
+          window.localStorage.clear();
+          window.sessionStorage.clear();
+          
+          // Step 4: Set flag for when we return from ePramaan
+          localStorage.setItem("SSO_REDIRECTING", "true");
+          await new Promise(resolve => setTimeout(resolve, 100));
+          // Step 6: NOW submit form to ePramaan
           const form = document.createElement("form");
           form.method = "POST";
           form.action = Urls.ePramaan.logoutUrl;
@@ -108,7 +116,18 @@ export const UserService = {
 
 
   logout: async () => {
-  console.log("[Logout] logout() invoked.");
+    // **HIDE MAIN APP**
+    const appRoot = document.getElementById("root");
+    if (appRoot) {
+      appRoot.style.display = "none";
+    }
+    
+    // **SHOW LOGOUT LOADER COMPONENT**
+    const loaderContainer = document.createElement("div");
+    loaderContainer.id = "logout-loader-container";
+    document.body.appendChild(loaderContainer);
+    
+    ReactDOM.render(<EPramaanLogoutLoader />, loaderContainer);
   const userType = UserService.getType();
 
   let result;
@@ -118,10 +137,10 @@ export const UserService = {
     console.error("[Logout] logoutUser() threw an error:", err);
   }
 
-  // If ePramaan SSO logout happened → EXIT IMMEDIATELY
+  // If ePramaan SSO logout happened → storage already cleared, form submitted
   if (result?.ePramaanInitiated) {
-    Digit.SessionStorage.set("SSO_REDIRECTING", true);
-    return; // critical
+    console.log("ePramaan logout initiated, waiting for redirect...");
+    return;
   }
 
   // Normal logout cleanup (ONLY if SSO not triggered)
