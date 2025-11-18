@@ -22,5 +22,6 @@ public class TaxHeadEstimate {
 
     private Category category;
 
+    //Used to add extra details like floor, wallType, etc. 
     private Object additionalDetails;
 }

@@ -283,7 +283,9 @@ public class CalculationService {
 		ArrayList<TaxHeadEstimate> estimates = new ArrayList<>();
 
 		List<Map<String, Object>> calculationTypeMap = mdmsService.getCalculationType(requestInfo, bpa, mdmsData, calulationCriteria);
+		log.info("Calculation Type: "+calculationTypeMap);
 		
+//		Calculating fee for each floor
 		for (Floor floor : bpa.getFloors()) {
 
 			BigDecimal totalTax = BigDecimal.ZERO;
@@ -301,7 +303,7 @@ public class CalculationService {
 			estimate.setTaxHeadCode(taxHeadCode);
 			
 			Map<String, Object> additional = new HashMap<>();
-			String level = toOrdinalFloorName(floor.getLevel());
+			String level = utils.toOrdinalFloorName(floor.getLevel());
 			additional.put("floor", level);
 			estimate.setAdditionalDetails(additional);
 
@@ -315,28 +317,6 @@ public class CalculationService {
 		estimatesAndSlabs.setEstimates(estimates);
 
 		return estimatesAndSlabs;
-	}
-
-	public static String toOrdinalFloorName(int number) {
-
-		String[] ordinals = { "Ground", "First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth", "Ninth",
-				"Tenth", "Eleventh", "Twelfth", "Thirteenth", "Fourteenth", "Fifteenth", "Sixteenth", "Seventeenth",
-				"Eighteenth", "Nineteenth" };
-
-		String[] tensWords = { "", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety" };
-
-		if (number < 20) {
-			return ordinals[number] + " Floor";
-		} else {
-			int tens = number / 10;
-			int ones = number % 10;
-
-			if (ones == 0) {
-				return tensWords[tens] + "ieth Floor";
-			} else {
-				return tensWords[tens] + " " + ordinals[ones] + " Floor";
-			}
-		}
 	}
 
 	private BigDecimal calculateEstimate(BPA bpa, Map<String, Object> calcType) {
