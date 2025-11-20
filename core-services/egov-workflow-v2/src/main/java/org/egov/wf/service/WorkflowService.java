@@ -294,11 +294,11 @@ public class WorkflowService {
         // Fetch current process instances from DB (using reassign method)
         List<ProcessStateAndAction> processStateAndActions = transitionService.getProcessStateAndActionsForReassign(request.getProcessInstances());
         
+        // Validate reassignment request (includes module name validation)
+        workflowValidator.validateReassignRequest(requestInfo, processStateAndActions);
+        
         // Enrich assignees with user details
         enrichmentService.enrichProcessRequestForReassign(requestInfo, processStateAndActions);
-        
-        // Validate reassignment request
-        workflowValidator.validateReassignRequest(requestInfo, processStateAndActions);
         
         // Update assignees in database
         statusUpdateService.updateAssignee(requestInfo, processStateAndActions);

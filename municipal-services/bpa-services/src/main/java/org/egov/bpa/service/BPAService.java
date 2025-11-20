@@ -149,7 +149,7 @@ public class BPAService {
         //bpaValidator.validateCreate(bpaRequest, mdmsData, values);
 
         //TODO : Need to remove after getting land info
-        landService.addLandInfoToBPA(bpaRequest);
+//        landService.addLandInfoToBPA(bpaRequest);
         enrichmentService.enrichBPACreateRequest(bpaRequest, mdmsData, null);
 
         wfIntegrator.callWorkFlow(bpaRequest);
@@ -943,6 +943,12 @@ public class BPAService {
         return userService.userCall(userSearchRequest, uri);
     }
 
+    /**
+     * Reassigns the RTP for a BPA application and updates the application in the repository
+     * New RTP details are enriched, workflow is called for reassignment, and the application is updated
+     * @param bpaRequest The BPARequest containing the BPA application details and new RTP information
+     * @return Updated BPA application with reassigned RTP
+    * */
     public BPA reassignRTP(@Valid BPARequest bpaRequest) {
         enrichmentService.enrichBPAUpdateRequest(bpaRequest, null);
         wfIntegrator.reassignRTP(bpaRequest);

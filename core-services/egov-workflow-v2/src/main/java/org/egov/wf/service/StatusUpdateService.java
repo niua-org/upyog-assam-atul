@@ -58,6 +58,7 @@ public class StatusUpdateService {
     /**
      * Updates the assignee for process instances without creating a new transition entry
      * Pushes the update request to Kafka topic for asynchronous processing by persister
+     * This was added to avoid creation of multiple transition entries when only RTP assignee is updated for BPA module
      * The persister will:
      * 1. Delete documents associated with transitions after first APPLY action
      * 2. Delete workflow transitions after first APPLY action

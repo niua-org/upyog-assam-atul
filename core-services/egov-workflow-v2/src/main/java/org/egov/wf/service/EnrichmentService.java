@@ -133,6 +133,7 @@ public class EnrichmentService {
 
             if(!CollectionUtils.isEmpty(processStateAndAction.getProcessInstanceFromRequest().getAssignes()))
                 uuids.addAll(processStateAndAction.getProcessInstanceFromRequest().getAssignes().stream().map(User::getUuid).collect(Collectors.toSet()));
+//          Added null check for assigner to avoid null pointer exception while fetching uuid
             if(processStateAndAction.getProcessInstanceFromRequest().getAssigner() != null)
                 uuids.add(processStateAndAction.getProcessInstanceFromRequest().getAssigner().getUuid());
 
@@ -180,6 +181,7 @@ public class EnrichmentService {
             if(!CollectionUtils.isEmpty(processInstance.getAssignes()))
                 uuids.addAll(processInstance.getAssignes().stream().map(User::getUuid).collect(Collectors.toList()));
 
+//            Added null check for assigner to avoid null pointer exception while fetching uuid
             if(processInstance.getAssigner() != null)
                 uuids.add(processInstance.getAssigner().getUuid());
         });

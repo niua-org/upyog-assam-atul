@@ -204,8 +204,9 @@ public class WorkflowValidator {
     /**
      * Validates the reassignment request
      * Ensures that:
-     * 1. The user has permission to reassign (has role to take action on current state)
-     * 2. The new assignees have roles allowed for the current state
+     * 1. Module name is 'bpa-services' (reassign is only allowed for bpa-services module)
+     * 2. The user has permission to reassign (has role to take action on current state)
+     * 3. The new assignees have roles allowed for the current state
      * 
      * @param requestInfo The RequestInfo of the incoming request
      * @param processStateAndActions The processStateAndActions containing processInstances to be validated
@@ -219,6 +220,24 @@ public class WorkflowValidator {
         Map<String,String> errorMap = new HashMap<>();
         
         for(ProcessStateAndAction processStateAndAction : processStateAndActions) {
+            ProcessInstance processInstanceFromDb = processStateAndAction.getProcessInstanceFromDb();
+            ProcessInstance processInstanceFromRequest = processStateAndAction.getProcessInstanceFromRequest();
+            
+            // Validate that process instance exists in DB
+            if(processInstanceFromDb == null) {
+                errorMap.put("INVALID_BUSINESS_ID", 
+                    "Process instance not found in database for businessId: " 
+                    + processInstanceFromRequest.getBusinessId());
+                continue;
+            }
+            
+            // Validate module name - reassign is only allowed for bpa-services module
+            String moduleName = processInstanceFromDb.getModuleName();
+            if(moduleName == null || !moduleName.equals("bpa-services")) {
+                errorMap.put("INVALID_MODULE_NAME", 
+                    "Reassign is only allowed for 'bpa-services' module. Found module: " + moduleName 
+                    + " for businessId: " + processInstanceFromDb.getBusinessId());
+            }
             String currentTenantId = processStateAndAction.getProcessInstanceFromRequest().getTenantId();
             List<String> roles = new LinkedList<>();
             
