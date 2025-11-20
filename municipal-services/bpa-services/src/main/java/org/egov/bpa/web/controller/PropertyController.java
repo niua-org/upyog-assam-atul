@@ -3,9 +3,12 @@ package org.egov.bpa.web.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.egov.bpa.exception.PropertyServiceException;
-import org.egov.bpa.service.property.PropertyValidationService;
-import org.egov.bpa.web.model.property.PropertyRequest;
-import org.egov.bpa.web.model.property.PropertyValidationResponse;
+import org.egov.bpa.service.property.sumato.SumatoPropertyValidationService;
+import org.egov.bpa.service.property.softthink.SoftThinkPropertyValidationService;
+import org.egov.bpa.web.model.property.sumato.PropertyRequest;
+import org.egov.bpa.web.model.property.sumato.SumatoPropertyValidationResponse;
+import org.egov.bpa.web.model.property.softthink.SoftThinkPropertyValidationResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,24 +23,29 @@ import java.util.Map;
 @Slf4j
 public class PropertyController {
 
-    private final PropertyValidationService propertyValidationService;
+    private final SumatoPropertyValidationService sumatopropertyValidationService;
+    private final SoftThinkPropertyValidationService softThinkPropertyValidationService;
 
     /**
      * Single API endpoint to validate property and check tax paid status
      *
      * @param propertyRequest - PropertyRequest containing property number and request info
-     * @return PropertyValidationResponse with validation status and tax paid status
+     * @return Response with validation status and tax paid status
      */
     @PostMapping("/validate")
-    public ResponseEntity<PropertyValidationResponse> validateProperty(@Valid @RequestBody PropertyRequest propertyRequest) {
+    public ResponseEntity<?> validateProperty(@Valid @RequestBody PropertyRequest propertyRequest) {
         String propertyNumber = propertyRequest.getPropertyNumber();
+        String tenantId = propertyRequest.getTenantId().split("\\.")[1];
+        log.info("Received property validation request for property number: {} in tenant: {}",propertyNumber, tenantId);
 
-        log.info("Received request to validate property: {}", propertyNumber);
-
-        PropertyValidationResponse response = propertyValidationService
-                .validatePropertyWithTaxStatus(propertyNumber);
-
-        return ResponseEntity.ok(response);
+        if ("silchar".equalsIgnoreCase(tenantId)) {
+            SoftThinkPropertyValidationResponse response = softThinkPropertyValidationService.validatePropertyWithTaxStatus(propertyNumber);
+            return ResponseEntity.ok(response);
+        } else {
+            SumatoPropertyValidationResponse response = sumatopropertyValidationService
+                    .validatePropertyWithTaxStatus(propertyNumber);
+            return ResponseEntity.ok(response);
+        }
     }
 
     @ExceptionHandler(PropertyServiceException.class)

@@ -1,4 +1,4 @@
-package org.egov.bpa.web.model.property;
+package org.egov.bpa.web.model.property.sumato;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PropertyDetails {
+public class SumatoPropertyDetails {
     private String ownerName;
     private String guardianName;
     private String address;

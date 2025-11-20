@@ -8,8 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class FeignConfig {
-
+public class SumatoFeignConfig {
     @Value("${sumato.property.service.username}")
     private String username;
 

@@ -1,8 +1,8 @@
-package org.egov.bpa.service.property;
-import org.egov.bpa.web.model.property.SumatoPropertyRequest;
-import org.egov.bpa.web.model.property.PropertyResponse;
-import org.egov.bpa.web.model.property.PropertyValidationResponse;
-import org.egov.bpa.web.model.property.PropertyDetails;
+package org.egov.bpa.service.property.sumato;
+import org.egov.bpa.web.model.property.sumato.SumatoPropertyRequest;
+import org.egov.bpa.web.model.property.sumato.SumatoPropertyResponse;
+import org.egov.bpa.web.model.property.sumato.SumatoPropertyValidationResponse;
+import org.egov.bpa.web.model.property.sumato.SumatoPropertyDetails;
 import org.egov.bpa.exception.PropertyNotFoundException;
 import org.egov.bpa.exception.PropertyServiceException;
 import lombok.RequiredArgsConstructor;
@@ -15,14 +15,14 @@ import java.time.Instant;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class PropertyValidationService {
+public class SumatoPropertyValidationService {
 
-    private final PropertyServiceClient propertyServiceClient;
+    private final SumatoPropertyServiceClient sumatopropertyServiceClient;
 
     /**
      * Validates property and returns complete validation response with tax status
      */
-    public PropertyValidationResponse validatePropertyWithTaxStatus(String propertyNumber) {
+    public SumatoPropertyValidationResponse validatePropertyWithTaxStatus(String propertyNumber) {
         try {
             log.info("Validating property with number: {}", propertyNumber);
 
@@ -32,7 +32,7 @@ public class PropertyValidationService {
                     .property(propertyNumber)
                     .build();
 
-            PropertyResponse response = propertyServiceClient.fetchPropertyDetails(request);
+            SumatoPropertyResponse response = sumatopropertyServiceClient.fetchPropertyDetails(request);
 
             Duration duration = Duration.between(start, Instant.now());
             double seconds = duration.toMillis() / 1000.0;
@@ -51,7 +51,7 @@ public class PropertyValidationService {
             boolean taxPaid = isTaxPaid(response);
 
             // Build validation response
-            PropertyValidationResponse validationResponse = PropertyValidationResponse.builder()
+            SumatoPropertyValidationResponse validationResponse = SumatoPropertyValidationResponse.builder()
                     .property(propertyNumber)
                     .isValid(isValid)
                     .taxPaid(taxPaid)
@@ -66,7 +66,7 @@ public class PropertyValidationService {
 
         } catch (PropertyNotFoundException e) {
             log.error("Property not found: {}", propertyNumber);
-            return PropertyValidationResponse.builder()
+            return SumatoPropertyValidationResponse.builder()
                     .property(propertyNumber)
                     .isValid(false)
                     .taxPaid(false)
@@ -84,7 +84,7 @@ public class PropertyValidationService {
     /**
      * Checks if property is valid based on response
      */
-    private boolean isPropertyValid(PropertyResponse response) {
+    private boolean isPropertyValid(SumatoPropertyResponse response) {
         return response != null
                 && response.getStatus() == 200
                 && response.getData() != null
@@ -94,7 +94,7 @@ public class PropertyValidationService {
     /**
      * Checks if tax is paid for the property
      */
-    private boolean isTaxPaid(PropertyResponse response) {
+    private boolean isTaxPaid(SumatoPropertyResponse response) {
         if (response == null || response.getData() == null) {
             return false;
         }
@@ -102,14 +102,14 @@ public class PropertyValidationService {
     }
 
     /**
-     * Maps PropertyResponse to PropertyDetails
+     * Maps SumatoPropertyResponse to SumatoPropertyDetails
      */
-    private PropertyDetails mapToPropertyDetails(PropertyResponse response) {
+    private SumatoPropertyDetails mapToPropertyDetails(SumatoPropertyResponse response) {
         if (response == null || response.getData() == null) {
             return null;
         }
-
-        return PropertyDetails.builder()
+        
+        return SumatoPropertyDetails.builder()
                 .ownerName(response.getData().getOwnerName())
                 .guardianName(response.getData().getGuardianName())
                 .address(response.getData().getAddress())

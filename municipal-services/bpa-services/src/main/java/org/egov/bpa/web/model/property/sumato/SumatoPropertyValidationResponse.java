@@ -1,4 +1,4 @@
-package org.egov.bpa.web.model.property;
+package org.egov.bpa.web.model.property.sumato;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,12 +9,12 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PropertyValidationResponse {
+public class SumatoPropertyValidationResponse {
     private String property;
     private Boolean isValid;
     private Boolean taxPaid;
     private String message;
-    private PropertyDetails details;
+    private SumatoPropertyDetails details;
 }
 
 
