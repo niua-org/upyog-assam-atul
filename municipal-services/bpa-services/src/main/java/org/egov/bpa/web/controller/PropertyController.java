@@ -4,8 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.egov.bpa.exception.PropertyServiceException;
 import org.egov.bpa.service.property.PropertyValidationService;
-import org.egov.bpa.web.model.property.PropertyRequest;
 import org.egov.bpa.web.model.property.PropertyValidationResponse;
+import org.egov.bpa.web.model.property.sumato.PropertyRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,14 +30,7 @@ public class PropertyController {
      */
     @PostMapping("/validate")
     public ResponseEntity<PropertyValidationResponse> validateProperty(@Valid @RequestBody PropertyRequest propertyRequest) {
-        String propertyNumber = propertyRequest.getPropertyNumber();
-
-        log.info("Received request to validate property: {}", propertyNumber);
-
-        PropertyValidationResponse response = propertyValidationService
-                .validatePropertyWithTaxStatus(propertyNumber);
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(propertyValidationService.validateProperty(propertyRequest));
     }
 
     @ExceptionHandler(PropertyServiceException.class)

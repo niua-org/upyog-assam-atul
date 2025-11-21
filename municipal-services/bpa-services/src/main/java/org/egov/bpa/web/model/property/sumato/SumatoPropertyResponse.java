@@ -1,4 +1,4 @@
-package org.egov.bpa.web.model.property;
+package org.egov.bpa.web.model.property.sumato;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -10,10 +10,10 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PropertyResponse {
+public class SumatoPropertyResponse {
     private Integer status;
     private String message;
-    private PropertyDataResponse data;
+    private SumatoPropertyDataResponse data;
 }
 
 
@@ -22,7 +22,7 @@ public class PropertyResponse {
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-class ConstructionType {
+class SumatoConstructionType {
     @JsonProperty("building_type")
     private String buildingType;
 

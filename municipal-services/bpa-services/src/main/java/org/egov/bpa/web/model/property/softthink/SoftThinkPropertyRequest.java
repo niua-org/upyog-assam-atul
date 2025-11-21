@@ -1,4 +1,4 @@
-package org.egov.bpa.web.model.property;
+package org.egov.bpa.web.model.property.softthink;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SumatoPropertyRequest {
-    @JsonProperty("holding")
-    private String property;
+public class SoftThinkPropertyRequest {
+    @JsonProperty("HoldingNumber")
+    private String HoldingNumber;
 }

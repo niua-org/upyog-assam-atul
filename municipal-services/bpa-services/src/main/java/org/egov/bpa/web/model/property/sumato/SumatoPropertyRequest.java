@@ -1,19 +1,16 @@
-package org.egov.bpa.web.model.property;
+package org.egov.bpa.web.model.property.sumato;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.egov.common.contract.request.RequestInfo;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PropertyRequest {
-
-    private RequestInfo requestInfo;
-
-    private String propertyNumber;
+public class SumatoPropertyRequest {
+    @JsonProperty("holding")
+    private String property;
 }

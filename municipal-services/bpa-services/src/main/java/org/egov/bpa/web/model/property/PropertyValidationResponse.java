@@ -11,12 +11,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class PropertyValidationResponse {
     private String property;
-    private Boolean isValid;
-    private Boolean taxPaid;
+    private boolean isValid;
+    private boolean taxPaid;
     private String message;
+    private String status;
     private PropertyDetails details;
 }
-
-
-
-

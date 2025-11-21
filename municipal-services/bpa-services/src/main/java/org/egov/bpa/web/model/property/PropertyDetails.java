@@ -16,5 +16,6 @@ public class PropertyDetails {
     private String phone;
     private String ulb;
     private String ward;
+    private String propertyVendor;
     private String buildingUse;
 }
