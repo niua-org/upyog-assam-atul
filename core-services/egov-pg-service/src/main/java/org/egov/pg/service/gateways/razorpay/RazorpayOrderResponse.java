@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.Map;
 
 @Data
@@ -15,7 +16,14 @@ import java.util.Map;
 class RazorpayOrderResponse {
     private String id;
     private String entity;
-    private Integer amount;
+    private Long amount;
+
+    @JsonProperty("amount_due")
+    private Long amountDue;
+
+    @JsonProperty("amount_paid")
+    private Long amountPaid;
+
     private String currency;
     private String receipt;
     private String status;
@@ -24,7 +32,11 @@ class RazorpayOrderResponse {
     @JsonProperty("created_at")
     private Long createdAt;
 
-    private Map<String, String> notes;
+    @JsonProperty("offer_id")
+    private String offerId;
+
+    private Object notes; // Handles both [] and {}
+
 }
 
 @Data
@@ -65,8 +77,8 @@ class RazorpayPaymentResponse {
     private String email;
     private String contact;
 
-//    private Map<String, String> notes;
-    private Object notes;
+//   private Map<String, String> notes;
+     private Object notes;
 
 
     private Integer fee;
