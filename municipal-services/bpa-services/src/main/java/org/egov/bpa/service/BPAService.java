@@ -510,7 +510,7 @@ public class BPAService {
 			break;
 
 		case "SUBMIT_REPORT":
-			Object mdmsData = util.mDMSCall(requestInfo, tenantId);
+//			Object mdmsData = util.mDMSCall(requestInfo, tenantId);
 	        nocService.createNocRequest(bpaRequest, mdmsData);
             enrichmentService.enrichBPAUpdateRequest(bpaRequest, businessService);
             wfIntegrator.callWorkFlow(bpaRequest);
