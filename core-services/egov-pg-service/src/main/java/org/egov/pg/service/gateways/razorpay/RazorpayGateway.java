@@ -83,7 +83,7 @@ public class RazorpayGateway implements Gateway {
             String orderId = createRazorpayOrder(transaction);
 
             // Generate checkout options as JSON
-            Map<String, Object> options = new HashMap<>();
+            Map<String, Object> options = transaction.getAdditionalDetails() == null ? new HashMap<>() : (Map<String, Object>) transaction.getAdditionalDetails();
             options.put("key", KEY_ID);
             String amtAsPaise = Utils.formatAmtAsPaise(transaction.getTxnAmount());
             options.put("amount", amtAsPaise);
@@ -100,8 +100,6 @@ public class RazorpayGateway implements Gateway {
             Map<String, String> notes = new HashMap<>();
             notes.put("transaction_id", transaction.getTxnId());
             options.put("notes", notes);
-
-//            options.put("callback_url", transaction.getCallbackUrl());
 
             /*
             Build backend callback URL that Razorpay will post to after payment.
@@ -165,24 +163,23 @@ public class RazorpayGateway implements Gateway {
 
     @Override
     public Transaction fetchStatus(Transaction currentStatus, Map<String, String> params) {
-        String paymentId = params.get("razorpay_payment_id");
-        String orderId = params.get("razorpay_order_id");
-        String signature = params.get("razorpay_signature");
-        log.info("Fetching Razorpay payment status for Payment ID: {}, Order ID: {}", paymentId, orderId);
         try {
             // Verify signature
-            if (!verifySignature(orderId, paymentId, signature)) {
+           /* if (!verifySignature(orderId, paymentId, signature)) {
                 throw new CustomException("SIGNATURE_VERIFICATION_FAILED", "Payment signature verification failed");
-            }
+            }*/
+            Map<String, Object> additionalDetails = objectMapper.convertValue(currentStatus.getAdditionalDetails(), Map.class);;
+            log.info("Fetching Razorpay payment status additional details: {}", additionalDetails);
+            String orderId = additionalDetails.get("order_id").toString();
 
             // Fetch payment details
             HttpHeaders headers = new HttpHeaders();
             headers.setBasicAuth(KEY_ID, KEY_SECRET);
             HttpEntity<Void> request = new HttpEntity<>(headers);
 
-            String paymentUrl = PAYMENT_URL + "/" + paymentId;
+            String orderUrl = ORDER_URL + "/" + orderId;
             ResponseEntity<RazorpayPaymentResponse> response = restTemplate.exchange(
-                    paymentUrl, org.springframework.http.HttpMethod.GET, request, RazorpayPaymentResponse.class);
+                    orderUrl, org.springframework.http.HttpMethod.GET, request, RazorpayPaymentResponse.class);
 
             log.info("Razorpay payment fetch response: {}", response);
 
@@ -239,7 +236,7 @@ public class RazorpayGateway implements Gateway {
             status = Transaction.TxnStatusEnum.SUCCESS;
         } else if ("failed".equalsIgnoreCase(resp.getStatus())) {
             status = Transaction.TxnStatusEnum.FAILURE;
-        } else if ("authorized".equalsIgnoreCase(resp.getStatus())) {
+        } else if ("paid".equalsIgnoreCase(resp.getStatus())) {
             status = Transaction.TxnStatusEnum.SUCCESS;
         }
 
