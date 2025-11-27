@@ -164,13 +164,14 @@ public class RazorpayGateway implements Gateway {
     @Override
     public Transaction fetchStatus(Transaction currentStatus, Map<String, String> params) {
         try {
+            /// TODO:- Need to explore this verySignature and then unComment it
             // Verify signature
            /* if (!verifySignature(orderId, paymentId, signature)) {
                 throw new CustomException("SIGNATURE_VERIFICATION_FAILED", "Payment signature verification failed");
             }*/
             Map<String, Object> additionalDetails = objectMapper.convertValue(currentStatus.getAdditionalDetails(), Map.class);;
-            log.info("Fetching Razorpay payment status additional details: {}", additionalDetails);
             String orderId = additionalDetails.get("order_id").toString();
+            log.info("Fetching Razorpay payment status for Order ID: {}", orderId);
 
             // Fetch payment details
             HttpHeaders headers = new HttpHeaders();
