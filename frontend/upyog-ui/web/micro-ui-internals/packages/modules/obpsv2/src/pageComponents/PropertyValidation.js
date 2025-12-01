@@ -90,23 +90,6 @@ const PropertyValidation = ({ t, config, onSelect, formData, searchResult }) => 
       setError("Invalid Property ID. Please enter a valid TIN number.");
       return;
     }
-    try {
-    const property = await OBPSV2Services.propertyValidate({
-      tenantId: tenantId,
-      propertyNumber: propertyID,
-    });
-    if (property.valid) {
-      setPropertyDetails(property);
-      setError(null);
-    } else {
-      setPropertyDetails(null);
-      setError(property.message);
-    }
-  } catch (error) {
-    setError("Error fetching property details");
-  } finally {
-    setLoading(false); // Set loading state to false once the request is completed
-  }
     if (propertyDetails && !propertyDetails.taxPaid) {
       setError("Please pay the taxes to proceed");
       return; // Don't proceed if taxes are not paid

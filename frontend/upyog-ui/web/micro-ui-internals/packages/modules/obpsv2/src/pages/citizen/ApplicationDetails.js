@@ -69,6 +69,7 @@ import {
     const [collectionBillArray, setCollectionBillArray] = useState([]);
     const [collectionBillDetails, setCollectionBillDetails] = useState([]);
     const [totalAmount, setTotalAmount] = useState(0);
+    const [viewTimeline, setViewTimeline]=useState(false);
      // New state for GIS response
     const [gisResponse, setGisResponse] = useState(null);
     const [showGisResponse, setShowGisResponse] = useState(false);
@@ -79,7 +80,13 @@ import {
       return data?.BPA?.PermissibleZone || {};
     },
   });
-
+  const handleViewTimeline=()=>{
+    setViewTimeline(true);
+      const timelineSection=document.getElementById('timeline');
+      if(timelineSection){
+        timelineSection.scrollIntoView({behavior: 'smooth'});
+      } 
+  };
     useEffect(() => {
       const fetchWorkflow = async () => {
         const details = await Digit.WorkflowService.getByBusinessId(tenantId, acknowledgementIds);
@@ -831,6 +838,7 @@ import {
                 options={dowloadOptions}
               />
             )}
+            {<LinkButton label={t("VIEW_TIMELINE")} style={{ color:"#A52A2A"}} onClick={handleViewTimeline}></LinkButton>}
           </div>
           <Card>
           {/* {window.location.href.includes("/employee/") && bpa_details?.status==="PENDING_GMDA_ENGINEER" && (

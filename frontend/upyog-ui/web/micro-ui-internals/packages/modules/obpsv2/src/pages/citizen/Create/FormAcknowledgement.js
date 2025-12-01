@@ -54,7 +54,7 @@ const capitalize = (text) => text.substr(0, 1).toUpperCase() + text.substr(1);
 const ulbCamel = (ulb) =>
   ulb.toLowerCase().split(" ").map(capitalize).join(" ");
 
-const formatformData = (formData) => {
+const formatformData = (formData, t) => {
   if (!formData || typeof formData !== "object") return [];
 
   return Object.entries(formData)
@@ -71,7 +71,7 @@ const formatformData = (formData) => {
       }
 
       return {
-        title: `FORM_${key.replace(/\s+/g, "_").toUpperCase()}`,
+        title: t(`FORM_${key.replace(/\s+/g, "_").toUpperCase()}`),
         value: finalValue,
       };
     });
@@ -87,7 +87,7 @@ const FormAcknowledgement = async (application, tenantInfo, t, applicationNumber
     detailsSection = [
       {
         title: t(`${formType}_DETAILS`),
-        values: formatformData(formData),
+        values: formatformData(formData, t),
       },
     ];
   } else {

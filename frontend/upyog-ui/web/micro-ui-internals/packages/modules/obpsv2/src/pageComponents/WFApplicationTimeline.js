@@ -1,5 +1,5 @@
-import { CardSectionHeader, CheckPoint, ConnectingCheckPoints, Loader } from "@upyog/digit-ui-react-components";
-import React, { Fragment, useEffect } from "react";
+import { CardSectionHeader, CheckPoint, ConnectingCheckPoints, Loader, LinkButton } from "@upyog/digit-ui-react-components";
+import React, { Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import WFCaption from "./WFCaption";
 
@@ -7,7 +7,7 @@ const WFApplicationTimeline = (props) => {
   
   const { t } = useTranslation();
   const businessService = props?.application?.businessService;
-
+  const [showAllTimeline, setShowAllTimeline]=useState(false);
   const { isLoading, data, refetch } = Digit.Hooks.useWorkflowDetails({
     tenantId: props.application?.tenantId,
     id: props.application?.applicationNo,
@@ -19,7 +19,9 @@ const WFApplicationTimeline = (props) => {
     }
   }, [props.application?.status]);
 
-
+  const toggleTimeline=()=>{
+    setShowAllTimeline((prev)=>!prev);
+  }
   function OpenImage(imageSource, index, thumbnailsToShow) {
     window.open(thumbnailsToShow?.fullImage?.[0], "_blank");
   }
@@ -65,6 +67,7 @@ const WFApplicationTimeline = (props) => {
     <React.Fragment>
       {!isLoading && (
         <Fragment>
+        <div id="timeline">
           {data?.timeline?.length > 0 && (
             <CardSectionHeader style={{ marginBottom: "16px", marginTop: "32px" }}>
               {t("CS_APPLICATION_DETAILS_APPLICATION_TIMELINE")}
@@ -79,7 +82,7 @@ const WFApplicationTimeline = (props) => {
           ) : (
             <ConnectingCheckPoints>
               {data?.timeline &&
-                data?.timeline.map((checkpoint, index) => {
+                data?.timeline.slice(0,showAllTimeline? data.timeline.length:2).map((checkpoint, index, arr) =>  {
 
                   return (
                     <React.Fragment key={index}>
@@ -96,6 +99,11 @@ const WFApplicationTimeline = (props) => {
                 })}
             </ConnectingCheckPoints>
           )}
+          {data?.timeline?.length > 2 && (
+            <LinkButton label={showAllTimeline? t("COLLAPSE") : t("VIEW_TIMELINE")} onClick={toggleTimeline}>
+            </LinkButton>   
+          )}
+          </div>
         </Fragment>
       )}
     </React.Fragment>
