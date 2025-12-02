@@ -202,6 +202,11 @@ public class BPAValidator {
 	 */
 //TODO need to make the changes in the data
 	public void validateSearch(RequestInfo requestInfo, BPASearchCriteria criteria) {
+		
+		log.info("Validating Search Parameters ");
+		log.info("User Type: " + requestInfo.getUserInfo().getType());
+		log.info("criteria.isEmpty(): " + criteria.isEmpty());
+		
 		if (!requestInfo.getUserInfo().getType().equalsIgnoreCase(BPAConstants.CITIZEN) && criteria.isEmpty())
 			throw new CustomException(BPAErrorConstants.INVALID_SEARCH, "Search without any paramters is not allowed");
 
@@ -227,6 +232,7 @@ public class BPAValidator {
 			throw new CustomException(BPAErrorConstants.INVALID_SEARCH, "No search parameters are expected");
 		else {
 			List<String> allowedParams = Arrays.asList(allowedParamStr.split(","));
+			log.info("Allowed Parameters: " + allowedParams);
 			validateSearchParams(criteria, allowedParams);
 		}
 	}
