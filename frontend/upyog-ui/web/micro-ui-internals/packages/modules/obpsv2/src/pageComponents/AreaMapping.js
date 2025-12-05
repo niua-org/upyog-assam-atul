@@ -32,101 +32,198 @@ const [ward, setWard] = useState(formData?.areaMapping?.ward || (searchResult?.a
 
 const [villageName, setVillageName] = useState(formData?.areaMapping?.villageName || (searchResult?.areaMapping?.villageName ? { code: searchResult.areaMapping.villageName, name: searchResult.areaMapping.villageName, i18nKey: searchResult.areaMapping.villageName } : ""));
 
-  // Fetch data from MDMS
-  const { data: areaMappingData, isLoading } = Digit.Hooks.useEnabledMDMS(
-    "as", 
-    "BPA", 
-    [
-      { name: "districts" }, 
-      { name: "planningAreas" }, 
-      { name: "ppAuthorities" }, 
-      { name: "concernedAuthorities" },
-      { name: "bpAuthorities" }, 
-      { name: "revenueVillages" }, 
-      { name: "villages" },
-      { name: "ulbWardDetails" }
-    ],
-    {
-      select: (data) => {
-        const formattedData = data?.BPA || {};
-        return formattedData;
-      },
-    }
-  );
+
+// const { data: areaMappingData, isLoading } = Digit.Hooks.useEnabledMDMS(
+//     "as", 
+//     "BPA", 
+//     [
+//       { name: "districts" }, 
+//       { name: "planningAreas" }, 
+//       { name: "ppAuthorities" }, 
+//       { name: "concernedAuthorities" },
+//       { name: "bpAuthorities" }, 
+//       { name: "revenueVillages" }, 
+//       { name: "villages" },
+//       { name: "ulbWardDetails" }
+//     ],
+//     {
+//       select: (data) => {
+//         const formattedData = data?.BPA || {};
+//         return formattedData;
+//       },
+//     }
+//   );
+
+  const { data : areaMappingData , isLoading} = Digit.Hooks.useEnabledMDMS("as", "egov-location", [{ name: "egov-location" }], {
+    select: (data) => {
+      const formattedData = data?.["egov-location"]?.["egov-location"]?.[0];
+      return formattedData;
+    },
+  });
+
+
+  console.log("areaMappingData", areaMappingData);
+
+
+
 
   // Initialize districts from MDMS data
+  // useEffect(() => {
+  //   if (areaMappingData?.districts) {
+  //     const formattedDistricts = areaMappingData.districts.map((district) => ({
+  //       code: district.districtCode,
+  //       name: district.districtName,
+  //       i18nKey: district.districtCode,
+  //     })).sort((a, b) => a.code.localeCompare(b.code));
+  //     setDistricts(formattedDistricts);
+  //   }
+  // }, [areaMappingData]);
+
+   // ✅ Initialize Districts
   useEffect(() => {
     if (areaMappingData?.districts) {
-      const formattedDistricts = areaMappingData.districts.map((district) => ({
-        code: district.districtCode,
-        name: district.districtName,
-        i18nKey: district.districtCode,
-      })).sort((a, b) => a.code.localeCompare(b.code));
+      const formattedDistricts = areaMappingData.districts.map((dist) => ({
+        code: dist.districtCode,
+        name: dist.districtName,
+        i18nKey: dist.districtCode,
+      }));
       setDistricts(formattedDistricts);
     }
   }, [areaMappingData]);
 
-  // Update concerned authorities based on BP authority and PP authority
-  useEffect(() => {
-    if (bpAuthority && planningArea && areaMappingData?.bpAuthorities) {
-      const filteredConcernedAuthorities = areaMappingData.bpAuthorities
-        .filter(authority => authority.planningAreaCode === planningArea?.code && authority.authorityType === bpAuthority?.code)
-        .map(authority => ({
-          code: authority.bpAuthorityCode,
-          name: authority.bpAuthorityName,
-          i18nKey: authority.bpAuthorityCode,
-        }))
-        .sort((a, b) => a.code.localeCompare(b.code));
-      setConcernedAuthorities(filteredConcernedAuthorities);
-    } else {
-      setConcernedAuthorities([]);
-    }
-  }, [bpAuthority, planningArea, areaMappingData]);
+    // ✅ Planning Areas (based on selected District)
+useEffect(() => {
+  if (district && areaMappingData?.districts) {
+    const selectedDistrict = areaMappingData.districts.find(
+      (d) => d.districtCode === district.code
+    );
+    const formattedPlanningAreas =
+      selectedDistrict?.planningAreas?.map((area) => ({
+        code: area.planningAreaCode,
+        name: area.planningAreaName,
+        i18nKey: area.planningAreaCode,
+      })) || [];
+    setPlanningAreas(formattedPlanningAreas);
+  } else {
+    setPlanningAreas([]);
+  }
+}, [district, areaMappingData]);
 
-  useEffect(() => {
-    if (areaMappingData?.concernedAuthorities) {
-      const formattedBpAuthorities = areaMappingData.concernedAuthorities.map((concernedAuthority) => ({
-        code: concernedAuthority.authorityType,
-        name: concernedAuthority.authorityType,
-        i18nKey: concernedAuthority.authorityType,
-      })).sort((a, b) => a.code.localeCompare(b.code));
-      setBpAuthorities(formattedBpAuthorities);
-    }
-  }, [areaMappingData]);
+// ✅ PP Authority (comes from selected planning area)
+useEffect(() => {
+  if (district && planningArea && areaMappingData?.districts) {
+    const selectedDistrict = areaMappingData.districts.find(
+      (d) => d.districtCode === district.code
+    );
+    const selectedArea = selectedDistrict?.planningAreas?.find(
+      (a) => a.planningAreaCode === planningArea.code
+    );
 
-  // Update planning areas when district changes
-  useEffect(() => {
-    if (district && areaMappingData?.planningAreas) {
-      const filteredPlanningAreas = areaMappingData.planningAreas
-        .filter(area => area.districtCode === district?.code)
-        .map(area => ({
-          code: area.planningAreaCode,
-          name: area.planningAreaName,
-          i18nKey: area.planningAreaCode,
-        }))
-        .sort((a, b) => a.code.localeCompare(b.code));
-      setPlanningAreas(filteredPlanningAreas);
-    } else {
-      setPlanningAreas([]);
-    }
-  }, [district, areaMappingData]);
-
-  // Update PP authorities when planning area changes
-  useEffect(() => {
-    if (planningArea && areaMappingData?.ppAuthorities) {
-      const filteredPpAuthorities = areaMappingData.ppAuthorities
-        .filter(authority => authority.planningAreaCode === planningArea?.code)
-        .map(authority => ({
-          code: authority.ppAuthorityCode,
-          name: authority.ppAuthorityName,
-          i18nKey: authority.ppAuthorityCode,
-        }))
-        .sort((a, b) => a.code.localeCompare(b.code));
-      setPpAuthorities(filteredPpAuthorities);
+    if (selectedArea?.ppAuthority) {
+      setPpAuthorities([
+        {
+          code: selectedArea.ppAuthority.ppAuthorityCode,
+          name: selectedArea.ppAuthority.ppAuthorityName,
+          i18nKey: selectedArea.ppAuthority.ppAuthorityCode,
+        },
+      ]);
     } else {
       setPpAuthorities([]);
     }
-  }, [planningArea, areaMappingData]);
+  } else {
+    setPpAuthorities([]);
+  }
+}, [district, planningArea, areaMappingData]);
+
+// ✅ BP Authorities (comes from same selected planning area)
+useEffect(() => {
+  if (district && planningArea && areaMappingData?.districts) {
+    const selectedDistrict = areaMappingData.districts.find(
+      (d) => d.districtCode === district.code
+    );
+    const selectedArea = selectedDistrict?.planningAreas?.find(
+      (a) => a.planningAreaCode === planningArea.code
+    );
+
+    const formattedBpAuthorities =
+      selectedArea?.bpAuthorities?.map((auth) => ({
+        code: auth.code,
+        name: auth.name,
+        i18nKey: auth.code,
+      })) || [];
+    setBpAuthorities(formattedBpAuthorities);
+  } else {
+    setBpAuthorities([]);
+  }
+}, [district, planningArea, areaMappingData]);
+
+  // // Update concerned authorities based on BP authority and PP authority
+  // useEffect(() => {
+  //   if (bpAuthority && bpAuthority && areaMappingData?.districts) {
+  //     const filteredConcernedAuthorities = areaMappingData.bpAuthorities
+  //       .filter(authority => authority.planningAreaCode === planningArea?.code && authority.authorityType === bpAuthority?.code)
+  //       .map(authority => ({
+  //         code: authority.bpAuthorityCode,
+  //         name: authority.bpAuthorityName,
+  //         i18nKey: authority.bpAuthorityCode,
+  //       }))
+  //       .sort((a, b) => a.code.localeCompare(b.code));
+  //     setConcernedAuthorities(filteredConcernedAuthorities);
+  //   } else {
+  //     setConcernedAuthorities([]);
+  //   }
+  // }, [bpAuthority, planningArea, areaMappingData]);
+
+  // useEffect(() => {
+  //   if (areaMappingData?.concernedAuthorities) {
+  //     const formattedBpAuthorities = areaMappingData.concernedAuthorities.map((concernedAuthority) => ({
+  //       code: concernedAuthority.authorityType,
+  //       name: concernedAuthority.authorityType,
+  //       i18nKey: concernedAuthority.authorityType,
+  //     })).sort((a, b) => a.code.localeCompare(b.code));
+  //     setBpAuthorities(formattedBpAuthorities);
+  //   }
+  // }, [areaMappingData]);
+
+  // Update planning areas when district changes
+  // useEffect(() => {
+  //   if (district && areaMappingData?.planningAreas) {
+  //     const filteredPlanningAreas = areaMappingData.planningAreas
+  //       .filter(area => area.districtCode === district?.code)
+  //       .map(area => ({
+  //         code: area.planningAreaCode,
+  //         name: area.planningAreaName,
+  //         i18nKey: area.planningAreaCode,
+  //       }))
+  //       .sort((a, b) => a.code.localeCompare(b.code));
+  //     setPlanningAreas(filteredPlanningAreas);
+  //   } else {
+  //     setPlanningAreas([]);
+  //   }
+  // }, [district, areaMappingData]);
+
+
+  // // Update PP authorities when planning area changes
+  // useEffect(() => {
+  //   if (planningArea && areaMappingData?.ppAuthorities) {
+  //     const filteredPpAuthorities = areaMappingData.ppAuthorities
+  //       .filter(authority => authority.planningAreaCode === planningArea?.code)
+  //       .map(authority => ({
+  //         code: authority.ppAuthorityCode,
+  //         name: authority.ppAuthorityName,
+  //         i18nKey: authority.ppAuthorityCode,
+  //       }))
+  //       .sort((a, b) => a.code.localeCompare(b.code));
+  //     setPpAuthorities(filteredPpAuthorities);
+  //   } else {
+  //     setPpAuthorities([]);
+  //   }
+  // }, [planningArea, areaMappingData]);
+
+  // ✅ PP Authority (from selected Planning Area)
+
+
+
 
 
 
