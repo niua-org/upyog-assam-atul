@@ -49,6 +49,7 @@ import org.egov.common.utils.MultiStateInstanceUtil;
 import org.egov.tracer.model.CustomException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import com.itextpdf.io.font.constants.StandardFonts;
 import com.itextpdf.kernel.font.PdfFontFactory;
@@ -1029,9 +1030,7 @@ public class BPAService {
 	 * @param bpaRequest
 	 * @return
 	 */
-	public Object getFeeEstimateFromBpaCalculator(Object inputReq) {
-
-		CalculationReq calcRequest = (CalculationReq) inputReq;
+	public Object getFeeEstimateFromBpaCalculator(CalculationReq calcRequest) {
 
 		RequestInfo requestInfo = calcRequest.getRequestInfo();
 		List<CalulationCriteria> input = calcRequest.getCalulationCriteria();
