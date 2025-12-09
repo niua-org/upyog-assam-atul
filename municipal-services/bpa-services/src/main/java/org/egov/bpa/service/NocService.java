@@ -166,6 +166,11 @@ public class NocService {
 
 		List<String> nocTypes = new ArrayList<>();
 
+		if (siteEngrNocs == null || siteEngrNocs.isEmpty()) {
+			log.info("No NOCs suggested by Site Engineer.");
+			return nocTypes;
+		}
+
 		List<String> siteEngSuggestedNocs = siteEngrNocs.stream().map(NocType::toString).collect(Collectors.toList());
 
 		for (String nocType : siteEngSuggestedNocs) {
