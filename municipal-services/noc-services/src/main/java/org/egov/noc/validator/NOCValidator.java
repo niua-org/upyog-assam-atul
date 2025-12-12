@@ -102,23 +102,37 @@ public class NOCValidator {
 	 * @return
 	 */
 	public Map<String, String> getOrValidateBussinessService(Noc noc, Object mdmsData) {
-		List<Map<String, Object>> result = JsonPath.read(mdmsData, NOCConstants.NOCTYPE_JSONPATH_CODE);
-		if (result.isEmpty()) {
-			throw new CustomException("MDMS DATA ERROR", "Unable to fetch NocType from MDMS");
+		List<Map<String, Object>> nocTypeMappings = JsonPath.read(mdmsData, NOCConstants.NOCTYPE_JSONPATH_CODE);
+		if (nocTypeMappings.isEmpty()) {
+			throw new CustomException("MDMS DATA ERROR", "Unable to fetch NocTypeMapping from MDMS");
 		}
 
-		String filterExp = "$.[?(@.code == '" + noc.getNocType() + "' )]";
-		List<Map<String, Object>> jsonOutput = JsonPath.read(result, filterExp);
-		if (jsonOutput.isEmpty()) {
+		// Search through all permit types and their nested NOCs
+		Map<String, Object> foundNoc = null;
+		for (Map<String, Object> mapping : nocTypeMappings) {
+			List<Map<String, Object>> nocs = (List<Map<String, Object>>) mapping.get("nocs");
+			if (nocs != null) {
+				for (Map<String, Object> nocItem : nocs) {
+					if (noc.getNocType().equals(nocItem.get("code")) &&
+							Boolean.TRUE.equals(nocItem.get("isActive"))) {
+						foundNoc = nocItem;
+						break;
+					}
+				}
+			}
+			if (foundNoc != null) break;
+		}
+
+		if (foundNoc == null) {
 			throw new CustomException("MDMS DATA ERROR", "Unable to fetch " + noc.getNocType() + " workflow mode from MDMS");
 		}
 
 		Map<String, String> businessValues = new HashMap<>();
-		businessValues.put(NOCConstants.MODE, (String) jsonOutput.get(0).get(NOCConstants.MODE));
-		if (jsonOutput.get(0).get(NOCConstants.MODE).equals(NOCConstants.ONLINE_MODE))
-			businessValues.put(NOCConstants.WORKFLOWCODE, (String) jsonOutput.get(0).get(NOCConstants.ONLINE_WF));
+		businessValues.put(NOCConstants.MODE, (String) foundNoc.get(NOCConstants.MODE));
+		if (foundNoc.get(NOCConstants.MODE).equals(NOCConstants.ONLINE_MODE))
+			businessValues.put(NOCConstants.WORKFLOWCODE, (String) foundNoc.get(NOCConstants.ONLINE_WF));
 		else
-			businessValues.put(NOCConstants.WORKFLOWCODE, (String) jsonOutput.get(0).get(NOCConstants.OFFLINE_WF));
+			businessValues.put(NOCConstants.WORKFLOWCODE, (String) foundNoc.get(NOCConstants.OFFLINE_WF));
 
 		if (!ObjectUtils.isEmpty(noc.getWorkflow()) && !StringUtils.isEmpty(noc.getWorkflow().getAction()) && noc.getWorkflow().getAction().equals(NOCConstants.ACTION_INITIATE)) {
 			businessValues.put(NOCConstants.INITIATED_TIME, Long.toString(System.currentTimeMillis()));
