@@ -176,15 +176,10 @@ public class NOCValidator {
 				}
 				String docType = document.getDocumentType();
 				int lastIndex = docType.lastIndexOf(".");
-				String documentNs = "";
-				if (lastIndex > 1) {
-					documentNs = docType.substring(0, lastIndex);
-				} else if (lastIndex == 1) {
+				if (lastIndex == 1) {
 					throw new CustomException("NOC_INVALID_DOCUMENTTYPE", document.getDocumentType() + " is Invalid");
-				} else {
-					documentNs = docType;
 				}
-				addedDocTypes.add(documentNs);
+				addedDocTypes.add(docType);
 			});
 			addedDocTypes.forEach(documentType -> {
 				if (!docTypeMappings.contains(documentType)) {
