@@ -162,6 +162,14 @@ public class NocService {
 			nocs.add(noc);
 		}
 
+		//TODO: Added this FIRE NOC for testing will remove once testing is done
+		Noc noc = Noc.builder().tenantId(tenantId).applicationType(applicationType).sourceRefId(applicationNo)
+				.nocType("FIRE_SAFETY").source(source).workflow(workflow).documents(new ArrayList<>())
+				.additionalDetails(nocAdditionalDetails).build();
+		nocs.add(noc);
+
+		log.info("Final NOC List to be created : " + nocs);
+
 		NocRequest nocRequest = NocRequest.builder().nocList(nocs).requestInfo(bpaRequest.getRequestInfo()).build();
 
 		createNoc(nocRequest);
@@ -214,12 +222,16 @@ public class NocService {
 		Map<String, List<String>> nocTypeConditionsByOthers = nocByOthers.stream()
 				.collect(Collectors.toMap(n -> (String) n.get("code"), n -> (List<String>) n.get("conditions")));
 
+		List<String> applicableNocs = new ArrayList<>();
+
 		if (!CollectionUtils.isEmpty(nocTypeConditionsByOthers)) {
-			return nocEval.getApplicableNOCList(nocTypeConditionsByOthers, edcrResponse);
+			applicableNocs =  nocEval.getApplicableNOCList(nocTypeConditionsByOthers, edcrResponse);
 		} else {
 			log.debug("NOC Mapping is not found!!");
-			return new ArrayList<>();
+			return applicableNocs;
 		}
+		log.info("NOCs applicable as per NOC evaluator : " + applicableNocs);
+		return applicableNocs;
 	}
 
 	/**
@@ -333,8 +345,10 @@ public class NocService {
 
 		LinkedHashMap<String, Object> responseMap = null;
 		try {
+			log.info("NOC request : {}", nocRequest);
 			responseMap = (LinkedHashMap<String, Object>) serviceRequestRepository.fetchResult(uri, nocRequest);
 			NocResponse nocResponse = mapper.convertValue(responseMap, NocResponse.class);
+			log.info("NOC response : {}", nocResponse);
 		} catch (Exception se) {
 			throw new CustomException(BPAErrorConstants.NOC_SERVICE_EXCEPTION,
 					" Failed to create NOC of Type " + nocRequest.getNoc().getNocType());
