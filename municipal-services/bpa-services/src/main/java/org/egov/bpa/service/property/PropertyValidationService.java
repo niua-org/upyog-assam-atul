@@ -3,7 +3,6 @@ package org.egov.bpa.service.property;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.egov.bpa.config.BPAConfiguration;
-import org.egov.bpa.config.SoftThinkFeignConfig;
 import org.egov.bpa.service.property.gmc.GMCPropertyValidationService;
 import org.egov.bpa.service.property.softthink.SoftThinkPropertyValidationService;
 import org.egov.bpa.service.property.sumato.SumatoPropertyValidationService;
