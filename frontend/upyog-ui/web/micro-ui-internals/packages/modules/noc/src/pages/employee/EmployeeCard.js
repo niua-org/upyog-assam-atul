@@ -83,12 +83,12 @@ const NOCEmployeeHomeCard = () => {
                 count: !isInboxLoading ? totalCount : "",
                 label: t("TOTAL_APPLICATIONS"),
                 link: `/upyog-ui/employee/obps/inbox`
-            },
-            {   
-                count: !isInboxLoading ? nearingSlaCount : "-",
-                label: t("TOTAL_NEARING_SLA"),
-                link: `/upyog-ui/employee/obps/inbox`
-            }  
+            }
+            // {   
+            //     count: !isInboxLoading ? nearingSlaCount : "-",
+            //     label: t("TOTAL_NEARING_SLA"),
+            //     link: `/upyog-ui/employee/obps/inbox`
+            // }  
         ],
         links: [
             {
