@@ -132,7 +132,8 @@ const ActionModal = ({ t, action, tenantId, state, id, closeModal, submitAction,
       additionalDetails: {
         ...applicationData?.additionalDetails,
         submitReportinspection_pending: submitReport,
-        nocDetails:nocDetails,
+        // TODO: The else case is to be improved after testing or in case of noc code changes
+        nocDetails: nocList?.includes("CIVIL_AVIATION") ? nocDetails : {},
         pendingapproval: getPendingApprovals()
       },
        workflow:{
