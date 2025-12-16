@@ -86,6 +86,7 @@ import {
         workflowCode: item.additionalDetails?.workflowCode,
         submittedOn: item.additionalDetails?.SubmittedOn,
         approvalDate: item.additionalDetails?.approvalDate,
+        rejectionDate: item.additionalDetails?.rejectionDate,
       })) || [];
 
 
