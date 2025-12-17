@@ -85,9 +85,9 @@ import {
         applicantName: item.additionalDetails?.applicantName,
         workflowCode: item.additionalDetails?.workflowCode,
         submittedOn: item.additionalDetails?.SubmittedOn,
+        approvalDate: item.additionalDetails?.approvalDate,
+        rejectionDate: item.additionalDetails?.rejectionDate,
       })) || [];
-
-      console.log("ehgfhwef",mappedNocData);
 
 
     const [hasAccess, setHasAccess] = useState(false);
@@ -102,6 +102,8 @@ import {
     const [showGisResponse, setShowGisResponse] = useState(false);
     const [gisValidationSuccess, setGisValidationSuccess] = useState(false);
     const [gisData, setGisData] = useState(null);
+    const [nocInput, setNocInput] = useState("");
+    const [nocValidationResult, setNocValidationResult] = useState(null);
     const { data: mdmsData } = Digit.Hooks.useEnabledMDMS("as", "BPA", [{ name: "PermissibleZone" }], {
     select: (data) => {
       return data?.BPA?.PermissibleZone || {};
@@ -425,6 +427,27 @@ import {
             setIsUploading(false);
           }
         }
+
+    const handleNocValidate = async () => {
+      if (!nocInput.trim()) {
+        setActionError(t("NOC_INPUT_REQUIRED"));
+        return;
+      }
+      
+      try {
+        const response = await Digit.OBPSV2Services.nocValidate({
+          Noc: {
+          nocNo: nocInput.trim(),
+          tenantId: tenantId,
+          sourceRefId: acknowledgementIds
+          }
+        });
+        setNocValidationResult(response);
+      } catch (error) {
+        console.error("NOC validation error:", error);
+        setActionError(t("NOC_VALIDATION_FAILED"));
+      }
+    };
 
 
      
@@ -1353,12 +1376,13 @@ import {
                 text={t(landInfo?.units?.[0]?.occupancyType) || t("CS_NA")}
               />
 
+            <br />
             {mappedNocData.length > 0 && (
-              <React.Fragment>
-                <CardSubHeader style={{ fontSize: "24px" }}>
-                  {t("BPA_NOC_DETAILS")}
-                </CardSubHeader>
-
+              <Accordion
+                title={t("BPA_NOC_DETAILS")}
+                t={t}
+                isFlag={false}
+              >
                 {mappedNocData.map((noc, index) => (
                   <div key={noc.id || index} style={{ marginBottom: "2rem" }}>
                     <CardSubHeader style={{ fontSize: "20px", marginBottom: "0.5rem" }}>
@@ -1366,10 +1390,6 @@ import {
                     </CardSubHeader>
 
                     <StatusTable>
-                      {/* <Row
-                        label={t("BPA_NOC_TYPE")}
-                        text={t(noc.nocType) || t("CS_NA")}
-                      /> */}
                       <Row
                         label={t("BPA_NOC_APPLICATION_NO")}
                         text={noc.applicationNo || t("CS_NA")}
@@ -1382,10 +1402,23 @@ import {
                         label={t("BPA_APPLICATION_STATUS")}
                         text={noc.applicationStatus || t("CS_NA")}
                       />
+                      {noc.applicationStatus === 'APPROVED' && (
+                        <Row
+                          label={t("BPA_NOC_APPROVAL_DATES")}
+                          text={formatEpochDateDMY(noc.approvalDate) || t("CS_NA")}
+                        />
+                      )}
+
+                      {noc.applicationStatus === 'REJECTED' && (
+                        <Row
+                          label={t("BPA_NOC_REJECTION_DATES")}
+                          text={formatEpochDateDMY(noc.rejectionDate) || t("CS_NA")}
+                        />
+                      )}
                     </StatusTable>
                   </div>
                 ))}
-              </React.Fragment>
+                </Accordion>
             )}
 
 
@@ -1436,6 +1469,74 @@ import {
               </div>
               </>
             )}
+             <StatusTable style={{ marginTop: "16px" }}>
+              <Accordion
+                title={t("NOC_VALIDATION")}
+                t={t}
+                isFlag={false}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", width: "100%", marginBottom: "16px" }}>
+                  <div style={{ flex: 1 }}>
+                    <Row
+                      label={t("NOC_ARN_NUMBER")}
+                      text={
+                        <TextInput
+                          value={nocInput}
+                          onChange={(e) => setNocInput(e.target.value)}
+                          placeholder={t("Enter Noc Number")}
+                        />
+                      }
+                    />
+                  </div>
+                  <div style={{ marginLeft: "20px" }}>
+                    <LinkButton label={t("VALIDATE_NOC")} onClick={handleNocValidate} />
+                  </div>
+                </div>
+                {nocValidationResult && nocValidationResult.Noc && nocValidationResult.Noc.length > 0 && (
+                  <div>
+                    {nocValidationResult.Noc.map((noc, index) => {
+                      const details = noc.additionalDetails || {};
+                      return (
+                        <StatusTable key={index}>
+                          <Row
+                            label={t("APPLICATION_TYPE")}
+                            text={details.application_type || t("CS_NA")}
+                          />
+                          <Row
+                            label={t("ISSUED_DATE")}
+                            text={details.issued_date || t("CS_NA")}
+                          />
+                          <Row
+                            label={t("STATUS")}
+                            text={details.status || t("CS_NA")}
+                          />
+                          <Row
+                            label={t("ISSUED_BY")}
+                            text={details.issued_by || t("CS_NA")}
+                          />
+                          <Row
+                            label={t("COMPLIANCE_LETTER_NO")}
+                            text={details.compliance_letter_no || t("CS_NA")}
+                          />
+                          <Row
+                            label={t("LETTER_DATE")}
+                            text={details.letter_date || t("CS_NA")}
+                          />
+                          <Row
+                            label={t("DISTRICT_FIRE_OFFICE")}
+                            text={details.district_fire_office || t("CS_NA")}
+                          />
+                          <Row
+                            label={t("VALIDATION_MESSAGE")}
+                            text={details.validation_message || t("CS_NA")}
+                          />
+                        </StatusTable>
+                      );
+                    })}
+                  </div>
+                )}
+              </Accordion>
+            </StatusTable>
         
             {additionalDetails?.submitReportinspection_pending?.length > 0 ? (
               <div>

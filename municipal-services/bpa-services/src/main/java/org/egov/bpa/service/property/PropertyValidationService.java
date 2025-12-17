@@ -3,7 +3,6 @@ package org.egov.bpa.service.property;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.egov.bpa.config.BPAConfiguration;
-import org.egov.bpa.config.SoftThinkFeignConfig;
 import org.egov.bpa.service.property.gmc.GMCPropertyValidationService;
 import org.egov.bpa.service.property.softthink.SoftThinkPropertyValidationService;
 import org.egov.bpa.service.property.sumato.SumatoPropertyValidationService;
@@ -35,9 +34,7 @@ public class PropertyValidationService {
             return gmcPropertyValidationService.validateProperty(propertyNumber);
         }else {
             log.info("Property validation request for property number: {} in tenant: {} is handled by Sumato", propertyNumber, tenantId);
-            // TODO for Testing will be removed later after sumato api is fixed
-            return gmcPropertyValidationService.validateProperty(propertyNumber);
-//            return sumatoPropertyValidationService.validatePropertyWithTaxStatus(propertyNumber);
+            return sumatoPropertyValidationService.validatePropertyWithTaxStatus(propertyNumber);
         }
     }
 }

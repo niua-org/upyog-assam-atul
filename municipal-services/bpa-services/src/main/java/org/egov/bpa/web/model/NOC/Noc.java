@@ -5,6 +5,7 @@ import java.util.List;
 
 import javax.validation.constraints.NotNull;
 
+import lombok.*;
 import org.egov.bpa.web.model.NOC.enums.ApplicationType;
 import org.egov.bpa.web.model.NOC.enums.Status;
 import org.springframework.validation.annotation.Validated;
@@ -12,18 +13,13 @@ import org.springframework.validation.annotation.Validated;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
 @Validated
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString
 public class Noc {   
 	
 	  @JsonProperty("id")

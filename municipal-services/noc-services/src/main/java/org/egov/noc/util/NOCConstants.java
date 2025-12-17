@@ -64,6 +64,10 @@ public class NOCConstants {
 
 	public static final String INITIATED_TIME = "SubmittedOn";	
 	
+	public static final String APPROVAL_DATE = "approvalDate";	
+	
+	public static final String REJECTION_DATE = "rejectionDate";
+	
 	//sms notification
 
 	public static final String ACTION_STATUS_CREATED = "null_CREATED";
@@ -101,5 +105,6 @@ public class NOCConstants {
 	public static final String DOC_TYPE_PERMISSION = "NOC.PERMISSION";
 
 	// Fire NOC Workflow Constants
-	public static final String FIRE_NOC_WORKFLOW_CODE = "FIRE_NOC_SRV";
+	public static final String FIRE_NOC_WORKFLOW_CODE = "FIRE_SAFETY_SRV";
+	public static final String FIRE_SAFETY_NOC_TYPE = "FIRE_SAFETY";
 }

@@ -5,12 +5,11 @@ import SearchFormFieldsComponents from "./SearchFormFieldsComponent";
 import FilterFormFieldsComponent from "./FilterFormFieldsComponent";
 import useInboxTableConfig from "./useInboxTableConfig";
 import useInboxMobileCardsData from "./useInboxMobileCardsData";
-import { businessServiceList } from "../../../utils";
 
 const Inbox = ({parentRoute}) => {
     
     const { t } = useTranslation()
-
+const { businessServices, isLoading: isBusinessServiceLoading } = Digit.Hooks.noc.useBusinessServiceList(true);
     const tenantId = Digit.ULBService.getCurrentTenantId();
 
     const searchFormDefaultValues = {
@@ -24,7 +23,8 @@ const Inbox = ({parentRoute}) => {
       businessService: null,
       locality: [],
       assignee: "ASSIGNED_TO_ALL",
-      businessServiceArray: businessServiceList(true) || []
+      businessServiceArray: businessServices || []
+      // businessServiceList(true) || []
     }
     const tableOrderFormDefaultValues = {
       sortBy: "",
@@ -105,9 +105,12 @@ const Inbox = ({parentRoute}) => {
         tenantId,
         filters: { ...formState }
     });
+
+    const newName = formInitValue?.filterForm?.businessServiceArray.map(item=>item);
+
     const PropsForInboxLinks = {
         logoIcon: <ComplaintIcon />,
-        headerText: "ACTION_TEST_NOC",
+        headerText: t(newName + "_NOCS"),
         links: [{
           text: t("ES_COMMON_APPLICATION_SEARCH"),
           link: "/upyog-ui/employee/noc/search",

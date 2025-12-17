@@ -2,6 +2,7 @@ package org.egov.bpa.web.model.NOC;
 
 import java.util.List;
 
+import lombok.ToString;
 import org.egov.common.contract.response.ResponseInfo;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -13,6 +14,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
+@ToString
 public class NocResponse {
 	 
 	@JsonProperty("ResponseInfo")

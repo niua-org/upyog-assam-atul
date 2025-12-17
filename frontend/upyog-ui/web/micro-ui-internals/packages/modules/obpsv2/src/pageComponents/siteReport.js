@@ -16,6 +16,7 @@ const siteReport = ({submitReport, onChange, data}) => {
   // Extract BPA data from FormComposer
   const bpaData = data?.bpaData;
   const { t } = useTranslation();
+  const [buildingPermitAuthority, setBuildingPermitAuthority] = useState("");
   const { data: nocLists, isLoading } = Digit.Hooks.useEnabledMDMS(
     "as", 
     "NOC", 
@@ -49,6 +50,7 @@ const siteReport = ({submitReport, onChange, data}) => {
     { code: "ABOVE_300", name: "Plot size above 300 meters" },
     { code: "BELOW_300", name: "Plot size below 300 meters" }
   ];
+
   const [form, setForm] = useState({
     proposalNo: "",
     submittedOn: "",
@@ -123,6 +125,7 @@ const siteReport = ({submitReport, onChange, data}) => {
       const adjoiningOwners = appData?.additionalDetails?.adjoiningOwners || {};
       const rtpDetails = appData?.rtpDetails || {};
       const architectName = rtpDetails?.rtpName ? rtpDetails.rtpName.split(',')[0] : '';
+      setBuildingPermitAuthority(areaMapping?.buildingPermitAuthority || "");
       
       setForm(prev => ({
         ...prev,
@@ -131,7 +134,7 @@ const siteReport = ({submitReport, onChange, data}) => {
         applicantAddress: `${address?.houseNo || ''} ${address?.addressLine1 || ''} ${address?.addressLine2 || ''}`.trim() || prev.applicantAddress,
         architectName: t(architectName) || t(prev.architectName),
         masterPlanZone: t(areaMapping?.planningArea) || t(prev.masterPlanZone),
-        revenueVillage: t(areaMapping?.revenueVillage) || t(prev.revenueVillage),
+        revenueVillage: t(areaMapping?.revenueVillage) || t(areaMapping?.villageName) || t(prev.revenueVillage),
         pattaNo: t(landInfo?.newPattaNumber) || t(landInfo?.oldPattaNumber) || t(prev.pattaNo),
         dagNo: t(landInfo?.newDagNumber) || t(landInfo?.oldDagNumber) || t(prev.dagNo),
         plotArea: t(landInfo?.totalPlotArea) || t(prev.plotArea),
@@ -144,29 +147,41 @@ const siteReport = ({submitReport, onChange, data}) => {
       }));
     }
   }, [bpaData]);
-  const saveSession = (updatedNocDetails) => {
+  
+  const saveSession = (updatedNocDetails, updatedList) => {
+
     sessionStorage.setItem(
       "SUBMIT_REPORT_DATA",
       JSON.stringify({
         submitReport: form,
-        nocList,
+        nocList: updatedList || nocList,
         nocDetails: updatedNocDetails
       })
     );
   };
-  useEffect(() => {
-    const prevAAI = nocDetails?.AAI_NOC_DETAILS || {};
-    const siteElevation = prevAAI.siteElevation ?? "";
-    const documents = Array.isArray(prevAAI.documents) ? prevAAI.documents : [];
+
+  const getAAIObject = () => {
+    const list = nocDetails?.AAI_NOC_DETAILS;
+    return Array.isArray(list) && list.length > 0
+      ? list[0]
+      : {
+          nocType: "CIVIL_AVIATION",
+          siteElevation: "",
+          documents: {}
+        };
+  };
   
+  useEffect(() => {
+    const prevAAI = getAAIObject();
+
     let updatedAAI = {
-      siteElevation,
-      documents
+      ...prevAAI,
+      nocType: "CIVIL_AVIATION",
+      documents: Array.isArray(prevAAI.documents) ? prevAAI.documents : []
     };
   
     if (plotSizeType === "BELOW_300") {
       updatedAAI.CENTER = prevAAI.CENTER || {};
-  
       delete updatedAAI.EAST;
       delete updatedAAI.WEST;
       delete updatedAAI.NORTH;
@@ -183,7 +198,11 @@ const siteReport = ({submitReport, onChange, data}) => {
       delete updatedAAI.CENTER;
     }
   
-    const updated = { ...nocDetails, AAI_NOC_DETAILS: updatedAAI };
+    const updated = {
+      ...nocDetails,
+      AAI_NOC_DETAILS: [updatedAAI]
+    };
+  
     setNocDetails(updated);
     saveSession(updated);
   }, [plotSizeType]);
@@ -208,84 +227,95 @@ const siteReport = ({submitReport, onChange, data}) => {
   
     fetchGIS();
   }, [applicationNumber,tenantId]);
+
   useEffect(() => {
     if (plotSizeType === "BELOW_300" && gisData) {
-      const updated = {
-        ...nocDetails,
-        AAI_NOC_DETAILS: {
-          ...nocDetails.AAI_NOC_DETAILS,
-          CENTER: {
-            latitude: gisData?.Gis?.[0]?.latitude || "",
-            longitude: gisData?.Gis?.[0]?.longitude || ""
-          }
+      const prevAAI = getAAIObject();
+  
+      const updatedAAI = {
+        ...prevAAI,
+        CENTER: {
+          latitude: gisData?.Gis?.[0]?.latitude || "",
+          longitude: gisData?.Gis?.[0]?.longitude || ""
         }
       };
-      setNocDetails(updated);
   
+      const updated = {
+        ...nocDetails,
+        AAI_NOC_DETAILS: [updatedAAI]
+      };
+      setNocDetails(updated);
       saveSession(updated);
-
     }
   }, [plotSizeType, gisData]);
     
   
   const handleNocFieldChange = (nocType, key, value, parent = null) => {
-    let updated = { ...nocDetails };
+    const prevAAI = getAAIObject();
+    let updatedAAI = { ...prevAAI };
   
     if (!parent && key === "siteElevation") {
-      updated[nocType] = {
-        ...updated[nocType],
+      updatedAAI.siteElevation = value;
+    }
+    else if (plotSizeType === "ABOVE_300" && parent) {
+      updatedAAI[parent] = {
+        ...updatedAAI[parent],
         [key]: value
       };
     }
-    else if (plotSizeType === "ABOVE_300" && parent) {
-      updated[nocType] = {
-        ...updated[nocType],
-        [parent]: {
-          ...updated[nocType]?.[parent],
-          [key]: value
-        }
-      };
-    }
     else if (plotSizeType === "BELOW_300") {
-      updated[nocType] = {
-        ...updated[nocType],
-        CENTER: {
-          ...updated[nocType]?.CENTER,
-          [key]: value
-        }
+      updatedAAI.CENTER = {
+        ...updatedAAI.CENTER,
+        [key]: value
       };
     }
+  
+    const updated = {
+      ...nocDetails,
+      AAI_NOC_DETAILS: [updatedAAI]
+    };
   
     setNocDetails(updated);
     saveSession(updated); 
   };
+
   const handleDocumentsUpload = (docsArray, docType) => {
     const formattedDocs = docsArray.map(([fileName, fileObj]) => ({
       documentType: docType,
       fileStoreId: fileObj?.fileStoreId?.fileStoreId,
       fileName,
-      documentUid: fileObj?.fileStoreId?.fileStoreId
+      documentUid: fileObj?.fileStoreId?.fileStoreId,
+      additionalDetails:{
+        nocType:"CIVIL_AVIATION"
+      }
     }));
+
     setNocDetails(prev => {
-      const prevAAI = prev?.AAI_NOC_DETAILS || {};
+      const prevAAI = Array.isArray(prev?.AAI_NOC_DETAILS)
+        ? prev.AAI_NOC_DETAILS[0]
+        : { nocType: "CIVIL_AVIATION", documents: [] };
+    
       const prevDocs = Array.isArray(prevAAI.documents) ? prevAAI.documents : [];
       const filtered = prevDocs.filter(d => d.documentType !== docType);
-  
+    
       const merged = [...filtered, ...formattedDocs];
-  
+    
+      const updatedAAI = {
+        ...prevAAI,
+        documents: merged
+      };
+    
       const updated = {
         ...prev,
-        AAI_NOC_DETAILS: {
-          ...prevAAI,
-          documents: merged
-        }
+        AAI_NOC_DETAILS: [updatedAAI]
       };
-
+    
       setCivilAviationDocs(merged);
       saveSession(updated);
-  
+    
       return updated;
     });
+    
   };
   
   
@@ -295,8 +325,9 @@ const siteReport = ({submitReport, onChange, data}) => {
       : nocList.filter(item => item !== nocType);
   
     setNocList(updatedList); 
-    saveSession(nocDetails);
+    saveSession(nocDetails, updatedList);
   };
+
   const handleChange = (key, value) => {
     const updatedForm = { ...form, [key]: value };
     setForm(updatedForm);
@@ -435,16 +466,28 @@ const siteReport = ({submitReport, onChange, data}) => {
             {t("BPA_LOCATION_OF_LAND")}
           </CardSectionHeader>
 
-          <div style={fieldRowStyle}>
-            <CardLabel style={labelStyle}>{t("BPA_REVENUE_VILLAGE")}</CardLabel>
-            <TextInput
-              style={inputStyle}
-              value={form.revenueVillage}
-              onChange={(e) => handleChange("revenueVillage", e.target.value)}
-              disable={!!form.revenueVillage}
-            />
-          </div>
-
+           {/* Conditionally show village or revenueVillage field */}
+           {buildingPermitAuthority === "GRAM_PANCHAYAT" ? (
+            <div style={fieldRowStyle}>
+              <CardLabel style={labelStyle}>{t("VILLAGE_NAME")}</CardLabel>
+              <TextInput
+                style={inputStyle}
+                value={form.revenueVillage} // Still using revenueVillage field for village data
+                onChange={(e) => handleChange("revenueVillage", e.target.value)}
+                disable={!!form.revenueVillage}
+              />
+            </div>
+          ) : (
+            <div style={fieldRowStyle}>
+              <CardLabel style={labelStyle}>{t("BPA_REVENUE_VILLAGE")}</CardLabel>
+              <TextInput
+                style={inputStyle}
+                value={form.revenueVillage}
+                onChange={(e) => handleChange("revenueVillage", e.target.value)}
+                disable={!!form.revenueVillage}
+              />
+            </div>
+          )}
           <div style={fieldRowStyle}>
             <CardLabel style={labelStyle}>{t("BPA_PATTA_NO")}</CardLabel>
             <TextInput
@@ -574,6 +617,7 @@ const siteReport = ({submitReport, onChange, data}) => {
                       checked={isChecked || false}
                     />
                   </div>
+
                   {noc.code === "CIVIL_AVIATION" && isChecked && (
                     <div
                       style={{
@@ -588,7 +632,7 @@ const siteReport = ({submitReport, onChange, data}) => {
                     <CardLabel style={labelStyle}>Site Elevation (in sq meters)</CardLabel>
                     <TextInput
                       placeholder="Enter Site Elevation"
-                      value={nocDetails?.AAI_NOC_DETAILS?.siteElevation || ""}
+                      value={nocDetails?.AAI_NOC_DETAILS?.[0]?.siteElevation || ""}
                       onChange={(e) =>
                         handleNocFieldChange("AAI_NOC_DETAILS", "siteElevation", e.target.value)
                       }
@@ -621,7 +665,7 @@ const siteReport = ({submitReport, onChange, data}) => {
 
                               <TextInput
                                 placeholder="Enter Latitude"
-                                value={nocDetails?.AAI_NOC_DETAILS?.[dir]?.latitude || ""}
+                                value={nocDetails?.AAI_NOC_DETAILS?.[0]?.[dir]?.latitude || ""}
                                 onChange={(e) =>
                                   handleNocFieldChange(
                                     "AAI_NOC_DETAILS",
@@ -634,7 +678,7 @@ const siteReport = ({submitReport, onChange, data}) => {
 
                               <TextInput
                                 placeholder="Enter Longitude"
-                                value={nocDetails?.AAI_NOC_DETAILS?.[dir]?.longitude || ""}
+                                value={nocDetails?.AAI_NOC_DETAILS?.[0]?.[dir]?.longitude || ""}
                                 onChange={(e) =>
                                   handleNocFieldChange(
                                     "AAI_NOC_DETAILS",
@@ -663,7 +707,7 @@ const siteReport = ({submitReport, onChange, data}) => {
                             <span style={{ width: "60px" }}>Latitude</span>
                             <TextInput
                               value={
-                                nocDetails?.AAI_NOC_DETAILS?.CENTER?.latitude || "" 
+                                nocDetails?.AAI_NOC_DETAILS?.[0]?.CENTER?.latitude || "" 
                               }
                               onChange={(e) =>
                                 handleNocFieldChange(
@@ -677,7 +721,7 @@ const siteReport = ({submitReport, onChange, data}) => {
                             <span style={{ width: "70px" }}>Longitude</span>
                             <TextInput
                               value={
-                                nocDetails?.AAI_NOC_DETAILS?.CENTER?.longitude || ""
+                                nocDetails?.AAI_NOC_DETAILS?.[0]?.CENTER?.longitude || ""
                               }
                               onChange={(e) =>
                                 handleNocFieldChange(
@@ -723,9 +767,9 @@ const siteReport = ({submitReport, onChange, data}) => {
                           {t("CS_FILE_SIZE_RESTRICTIONS")}
                         </div>
 
-                        {(nocDetails?.AAI_NOC_DETAILS?.documents || []).filter(d => d.documentType === doc.documentType).length > 0 && (
+                        {(nocDetails?.AAI_NOC_DETAILS?.[0]?.documents || []).filter(d => d.documentType === doc.documentType).length > 0 && (
                           <DocumentsPreview
-                            documents={(nocDetails?.AAI_NOC_DETAILS?.documents || []).filter(d => d.documentType === doc.documentType).map((d) => ({
+                            documents={(nocDetails?.AAI_NOC_DETAILS?.[0]?.documents || []).filter(d => d.documentType === doc.documentType).map((d) => ({
                               title: doc.documentType,
                               fileStoreId: d.fileStoreId,
 
