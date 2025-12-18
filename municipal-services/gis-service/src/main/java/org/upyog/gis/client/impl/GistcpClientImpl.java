@@ -44,7 +44,7 @@ public class GistcpClientImpl implements GistcpClient {
         URI uri = UriComponentsBuilder.fromHttpUrl(apiUrl)
                 .queryParam("latitude", latitude)
                 .queryParam("longitude", longitude)
-                .queryParam("masterplan", masterplan.toLowerCase())
+                .queryParam("masterplan", masterplan)
                 .build()
                 .toUri();
         
