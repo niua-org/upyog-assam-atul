@@ -486,6 +486,7 @@ const LandDetails = ({ t, config, onSelect, formData, searchResult }) => {
             select={setRegisteredTechnicalPerson}
             optionCardStyles={{ maxHeight: "300px", overflowY: "auto" }}
             placeholder={t("BPA_SELECT_REGISTERED_TECHNICAL_PERSON")}
+            disable={searchResult?.rtpDetails?.rtpName ? true : false}
           />
 
           {/* Occupancy Type */}
