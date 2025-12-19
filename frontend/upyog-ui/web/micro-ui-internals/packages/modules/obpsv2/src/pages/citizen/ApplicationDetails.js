@@ -104,6 +104,7 @@ import {
     const [gisData, setGisData] = useState(null);
     const [nocInput, setNocInput] = useState("");
     const [nocValidationResult, setNocValidationResult] = useState(null);
+    const [nocSearchResult, setNocSearchResult] = useState(null);
     const { data: mdmsData } = Digit.Hooks.useEnabledMDMS("as", "BPA", [{ name: "PermissibleZone" }], {
     select: (data) => {
       return data?.BPA?.PermissibleZone || {};
@@ -122,7 +123,14 @@ import {
         setWorkflowDetails(details);
       };
 
+      const handleNocSearch = async () => {
+          let filters = {sourceRefId:acknowledgementIds};
+          const response = await Digit.NOCSearch.all(tenantId, filters)
+          setNocSearchResult(response);
+      };
+
       fetchWorkflow();
+      handleNocSearch();
     }, [acknowledgementIds, tenantId]);
 
     useEffect(() => {
@@ -1468,6 +1476,7 @@ import {
               </div>
               </>
             )}
+            {nocSearchResult?.Noc?.some(noc => noc.applicationStatus === "INPROGRESS") && (
              <StatusTable style={{ marginTop: "16px" }}>
               <Accordion
                 title={t("NOC_VALIDATION")}
@@ -1536,7 +1545,7 @@ import {
                 )}
               </Accordion>
             </StatusTable>
-        
+            )}
             {additionalDetails?.submitReportinspection_pending?.length > 0 ? (
               <div>
               <StatusTable>
