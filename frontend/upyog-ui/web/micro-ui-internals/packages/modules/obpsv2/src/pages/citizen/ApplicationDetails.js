@@ -104,6 +104,7 @@ import {
     const [gisData, setGisData] = useState(null);
     const [nocInput, setNocInput] = useState("");
     const [nocValidationResult, setNocValidationResult] = useState(null);
+    const [nocSearchResult, setNocSearchResult] = useState(null);
     const { data: mdmsData } = Digit.Hooks.useEnabledMDMS("as", "BPA", [{ name: "PermissibleZone" }], {
     select: (data) => {
       return data?.BPA?.PermissibleZone || {};
@@ -122,7 +123,14 @@ import {
         setWorkflowDetails(details);
       };
 
+      const handleNocSearch = async () => {
+          let filters = {sourceRefId:acknowledgementIds};
+          const response = await Digit.NOCSearch.all(tenantId, filters)
+          setNocSearchResult(response);
+      };
+
       fetchWorkflow();
+      handleNocSearch();
     }, [acknowledgementIds, tenantId]);
 
     useEffect(() => {
@@ -516,7 +524,7 @@ import {
         const response = await Digit.PaymentService.generatePdf(
           tenantId,
           {
-            Bpa: [{...application, edcrDetail, gisResponse}] 
+            Bpa: [{...application, edcrDetail: [{ ...edcrDetail }], gisResponse}] 
           },
           "bpaBuildingPermit"
         );
@@ -551,7 +559,7 @@ import {
       const application = data?.bpa?.[0];
       let fileStoreId = application?.ppFileStoreId;
       const edcrResponse = await Digit.OBPSService.scrutinyDetails("assam", { edcrNumber: data?.bpa?.[0]?.edcrNumber });
-        let edcrDetail = edcrResponse?.edcrDetail;
+        let edcrDetail = edcrResponse?.edcrDetail?.[0];
         const gisResponse = await Digit.OBPSV2Services.gisSearch({
           GisSearchCriteria: {
             applicationNo: acknowledgementIds,
@@ -562,7 +570,7 @@ import {
       if (!fileStoreId) {
         const response = await Digit.PaymentService.generatePdf(
           tenantId,
-          {Bpa : [{...application, edcrDetail, gisResponse}]},
+          {Bpa : [{...application, edcrDetail: [{ ...edcrDetail }], gisResponse}]},
           "bpaPlanningPermit"
         );
   
@@ -677,7 +685,6 @@ import {
           setCollectionBillArray(collectionArray);
           setCollectionBillDetails(collectionDetailsArray);
           setTotalAmount(total);
-          //console.log("collectiondet", collectionDetailsArray);
   
         } catch (err) {
           console.error("Error fetching collection details:", err);
@@ -1469,6 +1476,7 @@ import {
               </div>
               </>
             )}
+            {nocSearchResult?.Noc?.some(noc => noc.applicationStatus === "INPROGRESS") && (
              <StatusTable style={{ marginTop: "16px" }}>
               <Accordion
                 title={t("NOC_VALIDATION")}
@@ -1537,7 +1545,7 @@ import {
                 )}
               </Accordion>
             </StatusTable>
-        
+            )}
             {additionalDetails?.submitReportinspection_pending?.length > 0 ? (
               <div>
               <StatusTable>
