@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface MessageJpaRepository extends JpaRepository<Message, String> {
+public interface MessageJpaRepository extends JpaRepository<Message, Long> {
 	@Query("select m from Message m where m.tenantId = :tenantId and m.locale = :locale")
 	List<Message> find(@Param("tenantId") String tenantId, @Param("locale") String locale);
 
