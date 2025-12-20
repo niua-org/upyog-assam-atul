@@ -14,6 +14,9 @@ import org.egov.noc.web.model.NocSearchCriteria;
 import org.egov.noc.web.model.Workflow;
 import org.egov.noc.web.model.aai.AAIApplicationStatus;
 import org.egov.noc.web.model.aai.AAIStatusResponse;
+import org.egov.noc.workflow.WorkflowIntegrator;
+import org.egov.noc.workflow.WorkflowService;
+import org.egov.noc.web.model.workflow.BusinessService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -28,13 +31,16 @@ import lombok.extern.slf4j.Slf4j;
 public class NOCStatusUpdateService {
 
     @Autowired
-    private NOCService nocService;
-
-    @Autowired
     private AAINOCASIntegrationService aaiIntegrationService;
 
     @Autowired
     private org.egov.noc.repository.NOCRepository nocRepository;
+
+    @Autowired
+    private WorkflowIntegrator wfIntegrator;
+
+    @Autowired
+    private WorkflowService workflowService;
 
     /**
      * Updates NOC statuses based on AAI response
@@ -97,8 +103,8 @@ public class NOCStatusUpdateService {
             NocRequest nocRequest = new NocRequest();
             nocRequest.setNoc(existingNoc);
             nocRequest.setRequestInfo(requestInfo);
-            List<Noc> updatedNocs = nocService.update(nocRequest);
-            return !CollectionUtils.isEmpty(updatedNocs) ? updatedNocs.get(0) : existingNoc;
+            nocRepository.update(nocRequest, false);
+            return existingNoc;
         }
         
         if (newNocStatus.equals(existingNoc.getApplicationStatus())) {
@@ -129,23 +135,46 @@ public class NOCStatusUpdateService {
             existingNoc.setNocNo(aaiStatus.getNocasId());
         }
         
+        String workflowCode = getWorkflowCode(existingNoc);
+        
         if (workflowAction != null) {
             Workflow workflow = Workflow.builder().action(workflowAction).build();
             String comment = "Status updated from AAI: " + 
                     (aaiStatus.getRemark() != null ? aaiStatus.getRemark() : aaiStatus.getStatus());
             workflow.setComment(comment);
             existingNoc.setWorkflow(workflow);
+            
+            NocRequest nocRequest = new NocRequest();
+            nocRequest.setNoc(existingNoc);
+            nocRequest.setRequestInfo(requestInfo);
+            
+            wfIntegrator.callWorkFlow(nocRequest, workflowCode);
+            BusinessService businessService = workflowService.getBusinessService(existingNoc, 
+                    requestInfo, workflowCode);
+            boolean isStateUpdatable = businessService == null || 
+                    workflowService.isStateUpdatable(existingNoc.getApplicationStatus(), businessService);
+            nocRepository.update(nocRequest, isStateUpdatable);
         } else {
             existingNoc.setApplicationStatus(newNocStatus);
             existingNoc.setWorkflow(null);
+            NocRequest nocRequest = new NocRequest();
+            nocRequest.setNoc(existingNoc);
+            nocRequest.setRequestInfo(requestInfo);
+            nocRepository.update(nocRequest, false);
         }
+        
+        return existingNoc;
+    }
 
-        NocRequest nocRequest = new NocRequest();
-        nocRequest.setNoc(existingNoc);
-        nocRequest.setRequestInfo(requestInfo);
-
-        List<Noc> updatedNocs = nocService.update(nocRequest);
-        return !CollectionUtils.isEmpty(updatedNocs) ? updatedNocs.get(0) : existingNoc;
+    private String getWorkflowCode(Noc noc) {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> additionalDetails = noc.getAdditionalDetails() != null ? 
+                (Map<String, Object>) noc.getAdditionalDetails() : new HashMap<>();
+        String workflowCode = (String) additionalDetails.get("workflowCode");
+        if (workflowCode == null || workflowCode.trim().isEmpty()) {
+            workflowCode = NOCConstants.CIVIL_AVIATION_NOC_TYPE + "_SRV";
+        }
+        return workflowCode;
     }
 
     private void updateAdditionalDetailsFromAAI(Noc noc, AAIApplicationStatus aaiStatus) {
