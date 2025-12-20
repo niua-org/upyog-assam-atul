@@ -8,6 +8,7 @@ import org.egov.noc.util.NOCConstants;
 import org.egov.noc.web.model.aai.AAIApplicationStatus;
 import org.egov.noc.web.model.aai.AAIStatusResponse;
 import org.egov.tracer.model.CustomException;
+import org.egov.tracer.model.ServiceCallException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -34,12 +35,10 @@ public class AAINOCASIntegrationService {
 
     /**
      * Fetches NOC statuses from AAI NOCAS API
-     * 
-     * @param applicationNumbers Application numbers
-     * @param requestInfo Request info
+     *
      * @return AAI status response
      */
-    public AAIStatusResponse fetchNOCStatusFromAAI(List<String> applicationNumbers, RequestInfo requestInfo) {
+    public AAIStatusResponse fetchNOCStatusFromAAI() {
         if (!config.getAaiNocasEnabled()) {
             return AAIStatusResponse.builder()
                     .success(false)
@@ -92,6 +91,10 @@ public class AAINOCASIntegrationService {
 
     /**
      * Calls AAI NOCAS web service using GET request with form-urlencoded data
+     * This method constructs the API URL with required query parameters:
+     * - AuthorityID: AAI authority identifier from configuration
+     * - AuthorityKey: AAI authority key (encoded with special handling for @ and !
+     * characters)
      * 
      * @return AAI status response
      * @throws Exception if call fails
@@ -109,8 +112,11 @@ public class AAINOCASIntegrationService {
             Map<String, String> headers = new LinkedHashMap<>();
             headers.put("Content-Type", "application/x-www-form-urlencoded");
             
-            Object response = serviceRequestRepository.fetchResultUsingGetWithFormData(uri, headers);
+            Object response = serviceRequestRepository.getResultWithCustomHeaders(uri, headers);
             return parseAAIResponse(response);
+        } catch (ServiceCallException e) {
+            log.error("AAI API call failed: {}", e.getMessage());
+            throw new Exception("AAI API call failed: " + e.getMessage(), e);
         } catch (Exception e) {
             log.error("AAI API call failed", e);
             throw new Exception("AAI API call failed: " + e.getMessage(), e);
@@ -118,11 +124,20 @@ public class AAINOCASIntegrationService {
     }
 
     /**
-     * Calls AAI NOCAS filter search API using GET request with UNIQUE ID filter
+     * Calls AAI NOCAS filter search API to fetch NOC status for a specific UNIQUE ID
      * 
-     * @param uniqueId UNIQUE ID (BPA application number / sourceRefId)
-     * @return AAI status response
-     * @throws Exception if call fails
+     * This method constructs the filter search API URL with required query parameters:
+     * - AuthorityID: AAI authority identifier from configuration
+     * - AuthorityKey: AAI authority key (encoded with special handling for @ and ! characters)
+     * - AuthorityFilterSearchData: The UNIQUE ID (BPA application number / sourceRefId) to search for
+     * - FilterSearchType: Set to BYUNIQUEID to filter by UNIQUE ID
+     * 
+     * The method sends a GET request with application/x-www-form-urlencoded content type header
+     * and parses the response to extract NOC status information for the given UNIQUE ID.
+     * 
+     * @param uniqueId UNIQUE ID (BPA application number / sourceRefId) to search for
+     * @return AAIStatusResponse containing the NOC status for the given UNIQUE ID
+     * @throws Exception if API URL is not configured, API call fails, or response parsing fails
      */
     private AAIStatusResponse callAAIFilterSearchAPI(String uniqueId) throws Exception {
         try {
@@ -149,8 +164,11 @@ public class AAINOCASIntegrationService {
             Map<String, String> headers = new LinkedHashMap<>();
             headers.put("Content-Type", "application/x-www-form-urlencoded");
             
-            Object response = serviceRequestRepository.fetchResultUsingGetWithFormData(uriStringBuilder, headers);
+            Object response = serviceRequestRepository.getResultWithCustomHeaders(uriStringBuilder, headers);
             return parseAAIResponse(response);
+        } catch (ServiceCallException e) {
+            log.error("AAI filter search API call failed for UNIQUE ID {}: {}", uniqueId, e.getMessage());
+            throw new Exception("AAI filter search API call failed: " + e.getMessage(), e);
         } catch (Exception e) {
             log.error("AAI filter search API call failed for UNIQUE ID: {}", uniqueId, e);
             throw new Exception("AAI filter search API call failed: " + e.getMessage(), e);

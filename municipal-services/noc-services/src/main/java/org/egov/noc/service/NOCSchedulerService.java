@@ -42,6 +42,8 @@ public class NOCSchedulerService {
 
     /**
      * Scheduled job to sync NOC statuses with AAI NOCAS
+     * shedlock is used to prevent multiple instances from executing simultaneously
+     * pending aai nocs applications are fetched and their statuses are updated
      */
     @Scheduled(cron = "${scheduler.aai.noc.status.sync.cron}")
     @SchedulerLock(
@@ -56,6 +58,7 @@ public class NOCSchedulerService {
 
         try {
             RequestInfo requestInfo = createSystemRequestInfo();
+            // below method call just checks if there are any pending applications, otherwise returns
             List<Noc> pendingNocs = nocService.fetchNewAAINOCs(null);
             
             if (CollectionUtils.isEmpty(pendingNocs)) {
@@ -63,7 +66,7 @@ public class NOCSchedulerService {
                 return;
             }
 
-            AAIStatusResponse aaiResponse = aaiIntegrationService.fetchNOCStatusFromAAI(new ArrayList<>(), requestInfo);
+            AAIStatusResponse aaiResponse = aaiIntegrationService.fetchNOCStatusFromAAI();
             if (aaiResponse == null || !Boolean.TRUE.equals(aaiResponse.getSuccess())) {
                 log.error("AAI sync: failed to fetch status");
                 return;

@@ -44,6 +44,8 @@ public class NOCStatusUpdateService {
 
     /**
      * Updates NOC statuses based on AAI response
+     * Iterates through each AAI application status data object and updates the corresponding NOC
+     *
      * 
      * @param aaiResponse AAI response
      * @param requestInfo Request info
@@ -71,13 +73,15 @@ public class NOCStatusUpdateService {
 
     /**
      * Updates single NOC status
+     * Get the NOC by uniqueId, map AAI status to NOC status, and update if different
+     * For INPROCESS status, only update additionalDetails and nocNo without changing applicationStatus
+     * For other statuses, determine workflow action and execute status update
      * 
      * @param aaiStatus AAI status
      * @param requestInfo Request info
      * @return Updated NOC
-     * @throws Exception if update fails
      */
-    private Noc updateSingleNOCStatus(AAIApplicationStatus aaiStatus, RequestInfo requestInfo) throws Exception {
+    private Noc updateSingleNOCStatus(AAIApplicationStatus aaiStatus, RequestInfo requestInfo) {
         String uniqueId = aaiStatus.getUniqueId();
         
         NocSearchCriteria searchCriteria = NocSearchCriteria.builder()
@@ -100,9 +104,10 @@ public class NOCStatusUpdateService {
             if (aaiStatus.getNocasId() != null && !aaiStatus.getNocasId().trim().isEmpty()) {
                 existingNoc.setNocNo(aaiStatus.getNocasId());
             }
-            NocRequest nocRequest = new NocRequest();
-            nocRequest.setNoc(existingNoc);
-            nocRequest.setRequestInfo(requestInfo);
+            NocRequest nocRequest = NocRequest.builder()
+                    .noc(existingNoc)
+                    .requestInfo(requestInfo)
+                    .build();
             nocRepository.update(nocRequest, false);
             return existingNoc;
         }
@@ -111,8 +116,7 @@ public class NOCStatusUpdateService {
             log.debug("NOC {} already has status {}", uniqueId, newNocStatus);
             return existingNoc;
         }
-
-        String workflowAction = determineWorkflowAction(existingNoc.getApplicationStatus(), newNocStatus);
+        String workflowAction = determineWorkflowAction(newNocStatus);
         return executeNOCStatusUpdate(existingNoc, aaiStatus, workflowAction, newNocStatus, requestInfo);
     }
 
@@ -125,58 +129,37 @@ public class NOCStatusUpdateService {
      * @param newNocStatus New NOC status to set
      * @param requestInfo Request info
      * @return Updated NOC
-     * @throws Exception if update fails
      */
     private Noc executeNOCStatusUpdate(Noc existingNoc, AAIApplicationStatus aaiStatus, 
-                                     String workflowAction, String newNocStatus, RequestInfo requestInfo) throws Exception {
+                                     String workflowAction, String newNocStatus, RequestInfo requestInfo) {
         updateAdditionalDetailsFromAAI(existingNoc, aaiStatus);
         
         if (aaiStatus.getNocasId() != null && !aaiStatus.getNocasId().trim().isEmpty()) {
             existingNoc.setNocNo(aaiStatus.getNocasId());
         }
-        
-        String workflowCode = getWorkflowCode(existingNoc);
-        
+        NocRequest nocRequest = NocRequest.builder()
+                .noc(existingNoc)
+                .requestInfo(requestInfo)
+                .build();
         if (workflowAction != null) {
             Workflow workflow = Workflow.builder().action(workflowAction).build();
             String comment = "Status updated from AAI: " + 
                     (aaiStatus.getRemark() != null ? aaiStatus.getRemark() : aaiStatus.getStatus());
             workflow.setComment(comment);
             existingNoc.setWorkflow(workflow);
-            
-            NocRequest nocRequest = new NocRequest();
-            nocRequest.setNoc(existingNoc);
-            nocRequest.setRequestInfo(requestInfo);
-            
-            wfIntegrator.callWorkFlow(nocRequest, workflowCode);
-            BusinessService businessService = workflowService.getBusinessService(existingNoc, 
-                    requestInfo, workflowCode);
-            boolean isStateUpdatable = businessService == null || 
-                    workflowService.isStateUpdatable(existingNoc.getApplicationStatus(), businessService);
-            nocRepository.update(nocRequest, isStateUpdatable);
-        } else {
+            wfIntegrator.callWorkFlow(nocRequest, NOCConstants.CIVIL_NOC_WORKFLOW_CODE);
+        }
             existingNoc.setApplicationStatus(newNocStatus);
             existingNoc.setWorkflow(null);
-            NocRequest nocRequest = new NocRequest();
-            nocRequest.setNoc(existingNoc);
-            nocRequest.setRequestInfo(requestInfo);
-            nocRepository.update(nocRequest, false);
-        }
-        
+            nocRepository.update(nocRequest, true);
         return existingNoc;
     }
 
-    private String getWorkflowCode(Noc noc) {
-        @SuppressWarnings("unchecked")
-        Map<String, Object> additionalDetails = noc.getAdditionalDetails() != null ? 
-                (Map<String, Object>) noc.getAdditionalDetails() : new HashMap<>();
-        String workflowCode = (String) additionalDetails.get("workflowCode");
-        if (workflowCode == null || workflowCode.trim().isEmpty()) {
-            workflowCode = NOCConstants.CIVIL_AVIATION_NOC_TYPE + "_SRV";
-        }
-        return workflowCode;
-    }
-
+    /**
+     * Updates NOC additionalDetails with AAI status data
+     * @param noc NOC application
+     * @param aaiStatus AAI status
+    * */
     private void updateAdditionalDetailsFromAAI(Noc noc, AAIApplicationStatus aaiStatus) {
         @SuppressWarnings("unchecked")
         Map<String, Object> additionalDetails = noc.getAdditionalDetails() != null ? 
@@ -212,15 +195,12 @@ public class NOCStatusUpdateService {
 
     /**
      * Determines workflow action based on status
-     * 
-     * @param currentStatus Current status
+     *
      * @param newStatus New status
      * @return Workflow action
      */
-    private String determineWorkflowAction(String currentStatus, String newStatus) {
-        if (NOCConstants.APPROVED_STATE.equals(newStatus) || 
-            NOCConstants.APPLICATION_STATUS_APPROVED.equals(newStatus) ||
-            NOCConstants.AUTOAPPROVED_STATE.equals(newStatus)) {
+    private String determineWorkflowAction(String newStatus) {
+        if (NOCConstants.APPROVED_STATE.equals(newStatus)) {
             return NOCConstants.ACTION_APPROVE;
         }
         

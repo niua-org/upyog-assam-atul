@@ -426,79 +426,72 @@ public class AAINOCService {
 
 	/**
 	 * Extracts coordinates from NOC additionalDetails
-	 *
-	 * @param noc         NOC object containing additionalDetails with CENTER and siteElevation
-	 * @param bpa         BPA object (for building height from ECDR)
-	 * @param requestInfo RequestInfo for ECDR service call
-	 * @return List of coordinates
+	 * For plot > 300 sq m: Extracts 4 corner coordinates (EAST, WEST, NORTH, SOUTH)
+	 * For plot <= 300 sq m: Extracts center coordinate (CENTER)
 	 */
 	private List<SiteCoordinate> extractCoordinatesFromNOC(Noc noc, BPA bpa, RequestInfo requestInfo) {
 		List<SiteCoordinate> coordinates = new ArrayList<>();
-
-		if (noc == null) {
-			log.warn("NOC is null, cannot extract coordinates");
+		if (noc == null || noc.getAdditionalDetails() == null) {
 			return coordinates;
 		}
 
-		// Extract coordinates and siteElevation from additionalDetails
-		Map<String, Object> additionalDetails = noc.getAdditionalDetails() != null
-				? (Map<String, Object>) noc.getAdditionalDetails()
-				: new HashMap<>();
+		@SuppressWarnings("unchecked")
+		Map<String, Object> additionalDetails = (Map<String, Object>) noc.getAdditionalDetails();
 
-		String latitude = null;
-		String longitude = null;
-		Double siteElevation = null;
-
-		// Extract CENTER coordinates
-		Object centerObj = additionalDetails.get("CENTER");
-		if (centerObj instanceof Map) {
-			Map<String, Object> center = (Map<String, Object>) centerObj;
-			Object latObj = center.get("latitude");
-			Object lonObj = center.get("longitude");
-			
-			if (latObj != null) {
-				latitude = String.valueOf(latObj);
-			}
-			if (lonObj != null) {
-				longitude = String.valueOf(lonObj);
-			}
-		}
-
-		// Extract siteElevation
 		Object siteElevationObj = additionalDetails.get("siteElevation");
+		Double siteElevation = null;
 		if (siteElevationObj != null) {
 			try {
-				if (siteElevationObj instanceof Number) {
-					siteElevation = ((Number) siteElevationObj).doubleValue();
-				} else if (siteElevationObj instanceof String) {
-					String siteElevationStr = ((String) siteElevationObj).trim();
-					if (!siteElevationStr.isEmpty()) {
-						siteElevation = Double.parseDouble(siteElevationStr);
-					}
-				}
-			} catch (NumberFormatException e) {
-				log.warn("Invalid siteElevation value: {}", siteElevationObj, e);
+				siteElevation = siteElevationObj instanceof Number 
+						? ((Number) siteElevationObj).doubleValue()
+						: Double.parseDouble(String.valueOf(siteElevationObj).trim());
+			} catch (Exception e) {
+				log.warn("Invalid siteElevation: {}", siteElevationObj);
 			}
 		}
 
-		// Extract building height from ECDR if available
 		Double buildingHeight = null;
 		if (bpa != null && bpa.getEdcrNumber() != null && !bpa.getEdcrNumber().isEmpty()) {
 			buildingHeight = edcrService.fetchBuildingHeight(bpa.getEdcrNumber(), requestInfo);
 		}
-		
-		// Only create coordinate if we have at least latitude and longitude
-		if (latitude != null && longitude != null) {
-		SiteCoordinate coord = SiteCoordinate.builder()
-					.latitude(latitude)
-					.longitude(longitude)
-					.siteElevation(siteElevation)
-				.buildingHeight(buildingHeight)
-				.structureNo(1)
-				.build();
-		coordinates.add(coord);
-		} else {
-			log.warn("Missing coordinates in NOC additionalDetails - latitude: {}, longitude: {}", latitude, longitude);
+
+		String[] directions = {"EAST", "WEST", "NORTH", "SOUTH"};
+		for (String direction : directions) {
+			Object dirObj = additionalDetails.get(direction);
+			if (dirObj instanceof Map) {
+				@SuppressWarnings("unchecked")
+				Map<String, Object> dirMap = (Map<String, Object>) dirObj;
+				Object lat = dirMap.get("latitude");
+				Object lon = dirMap.get("longitude");
+				if (lat != null && lon != null) {
+					coordinates.add(SiteCoordinate.builder()
+							.latitude(String.valueOf(lat))
+							.longitude(String.valueOf(lon))
+							.siteElevation(siteElevation)
+							.buildingHeight(buildingHeight)
+							.structureNo(1)
+							.build());
+				}
+			}
+		}
+
+		if (coordinates.isEmpty()) {
+			Object centerObj = additionalDetails.get("CENTER");
+			if (centerObj instanceof Map) {
+				@SuppressWarnings("unchecked")
+				Map<String, Object> centerMap = (Map<String, Object>) centerObj;
+				Object lat = centerMap.get("latitude");
+				Object lon = centerMap.get("longitude");
+				if (lat != null && lon != null) {
+					coordinates.add(SiteCoordinate.builder()
+							.latitude(String.valueOf(lat))
+							.longitude(String.valueOf(lon))
+							.siteElevation(siteElevation)
+							.buildingHeight(buildingHeight)
+							.structureNo(1)
+							.build());
+				}
+			}
 		}
 
 		return coordinates;

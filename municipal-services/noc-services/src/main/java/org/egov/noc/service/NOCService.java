@@ -481,9 +481,10 @@ public class NOCService {
 				.build();
 		existingNoc.setWorkflow(workflow);
 
-		NocRequest updateRequest = new NocRequest();
-		updateRequest.setNoc(existingNoc);
-		updateRequest.setRequestInfo(nocRequest.getRequestInfo());
+		NocRequest updateRequest = NocRequest.builder()
+				.noc(existingNoc)
+				.requestInfo(nocRequest.getRequestInfo())
+				.build();
 
 		// Call Workflow to transitions state
 		wfIntegrator.callWorkFlow(updateRequest, NOCConstants.FIRE_NOC_WORKFLOW_CODE);
